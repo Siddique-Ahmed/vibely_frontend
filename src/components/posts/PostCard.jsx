@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToggleLike, useToggleBookmark, useSharePost, useDeletePost } from "../../hooks/useApi";
 import {
   Heart, MessageCircle, Share2, MoreHorizontal,
@@ -25,6 +26,7 @@ const reactions = [
 const PostCard = ({ post, onLike, onShare }) => {
   const { user } = useSelector((state) => state.auth);
   const navigate  = useNavigate();
+  const queryClient = useQueryClient();
   const { mutate: toggleLikeMutation }     = useToggleLike();
   const { mutate: toggleBookmarkMutation } = useToggleBookmark();
   const { mutate: sharePostMutation }      = useSharePost();
@@ -58,7 +60,9 @@ const PostCard = ({ post, onLike, onShare }) => {
   const [likes, setLikes] = useState(post?.likes ?? []);
   const [likesByReaction, setLikesByReaction] = useState(post?.likesByReaction ?? {});
   const [showReactions, setShowReactions] = useState(false);
+  const [showLikesOnHover, setShowLikesOnHover] = useState(false);
   const reactionTimeoutRef = useRef(null);
+  const likeCountTimeoutRef = useRef(null);
 
   // Optimistic bookmark state
   const [isBookmarked, setIsBookmarked] = useState(post?.isBookmarked ?? post?.is_bookmarked ?? false);
@@ -89,9 +93,27 @@ const PostCard = ({ post, onLike, onShare }) => {
       setIsLiked(false);
       setCurrentReaction(null);
       setLikesCount((c) => Math.max(0, c - 1));
+      
       toggleLikeMutation(
         { targetId: post._id, targetType: "Post", reactionType },
         { 
+          onSuccess: (data) => {
+            // Sync with the API response
+            const responseData = data || {};
+            // Invalidate queries to ensure fresh data
+            queryClient.invalidateQueries({ queryKey: ["likes", post._id] });
+            queryClient.invalidateQueries({ queryKey: ["posts"] });
+            queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
+            queryClient.invalidateQueries({ queryKey: ["post", post._id] });
+            
+            if (responseData?.data?.post) {
+              setIsLiked(responseData.data.post.isLiked ?? responseData.data.post.is_liked ?? false);
+              setCurrentReaction(responseData.data.post.reaction_type || null);
+              setLikesCount(responseData.data.post.likes_count ?? 0);
+              setLikes(responseData.data.post.likes ?? []);
+              setLikesByReaction(responseData.data.post.likesByReaction ?? {});
+            }
+          },
           onError: () => { 
             setIsLiked(true); 
             setCurrentReaction(prevReaction);
@@ -108,6 +130,23 @@ const PostCard = ({ post, onLike, onShare }) => {
       toggleLikeMutation(
         { targetId: post._id, targetType: "Post", reactionType },
         { 
+          onSuccess: (data) => {
+            // Sync with the API response
+            const responseData = data || {};
+            // Invalidate queries to ensure fresh data
+            queryClient.invalidateQueries({ queryKey: ["likes", post._id] });
+            queryClient.invalidateQueries({ queryKey: ["posts"] });
+            queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
+            queryClient.invalidateQueries({ queryKey: ["post", post._id] });
+            
+            if (responseData?.data?.post) {
+              setIsLiked(responseData.data.post.isLiked ?? responseData.data.post.is_liked ?? true);
+              setCurrentReaction(responseData.data.post.reaction_type || reactionType);
+              setLikesCount(responseData.data.post.likes_count ?? (wasLiked ? likesCount : likesCount + 1));
+              setLikes(responseData.data.post.likes ?? []);
+              setLikesByReaction(responseData.data.post.likesByReaction ?? {});
+            }
+          },
           onError: () => { 
             setIsLiked(wasLiked); 
             setCurrentReaction(prevReaction);
@@ -123,15 +162,15 @@ const PostCard = ({ post, onLike, onShare }) => {
   const handleMouseEnterLike = () => {
     reactionTimeoutRef.current = setTimeout(() => {
       setShowReactions(true);
-    }, 500);
+    }, 300);  // Reduced from 500ms for faster response
   };
 
   const handleMouseLeaveLike = () => {
     if (reactionTimeoutRef.current) clearTimeout(reactionTimeoutRef.current);
-    // Give some time to move to the picker
+    // Give time to move to picker before closing
     setTimeout(() => {
-      // We'll handle closing in the picker's own mouse leave or if mouse is far
-    }, 100);
+      setShowReactions(false);
+    }, 200);
   };
 
   const handleBookmark = (e) => {
@@ -326,7 +365,7 @@ const PostCard = ({ post, onLike, onShare }) => {
 
       {/* Engagement Stats */}
       <div className="px-4 py-2.5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 relative">
           <div className="flex -space-x-1">
             {likes.length > 0 && (
               <>
@@ -342,12 +381,76 @@ const PostCard = ({ post, onLike, onShare }) => {
             )}
           </div>
           {likesCount > 0 ? (
-            <button
-              onClick={() => setShowLikesModal(true)}
-              className="ml-1 hover:underline cursor-pointer font-medium"
+            <div
+              onMouseEnter={() => {
+                likeCountTimeoutRef.current = setTimeout(() => {
+                  setShowLikesOnHover(true);
+                }, 200);
+              }}
+              onMouseLeave={() => {
+                if (likeCountTimeoutRef.current) clearTimeout(likeCountTimeoutRef.current);
+                setTimeout(() => setShowLikesOnHover(false), 100);
+              }}
+              className="relative"
             >
-              {likesCount} {likesCount === 1 ? "like" : "likes"}
-            </button>
+              <button
+                onClick={() => setShowLikesModal(true)}
+                className="ml-1 hover:underline cursor-pointer font-medium"
+              >
+                {likesCount} {likesCount === 1 ? "like" : "likes"}
+              </button>
+              
+              {/* Likes Popup on Hover */}
+              <AnimatePresence>
+                {showLikesOnHover && likes.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    className="absolute bottom-full left-0 mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-40 min-w-max max-w-xs"
+                    onMouseEnter={() => {
+                      if (likeCountTimeoutRef.current) clearTimeout(likeCountTimeoutRef.current);
+                    }}
+                    onMouseLeave={() => {
+                      setTimeout(() => setShowLikesOnHover(false), 100);
+                    }}
+                  >
+                    <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
+                      {likes.slice(0, 5).map((like) => (
+                        <Link
+                          key={like._id}
+                          to={`/profile/${like._id}`}
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition group"
+                        >
+                          <img
+                            src={like.profile_picture || "/avatar.png"}
+                            alt={like.username}
+                            className="w-7 h-7 rounded-full object-cover"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-slate-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">
+                              {like.username}
+                            </p>
+                          </div>
+                          <span className="text-xs">{reactions.find(r => r.name === like.reaction_type)?.emoji || "👍"}</span>
+                        </Link>
+                      ))}
+                      {likes.length > 5 && (
+                        <button
+                          onClick={() => {
+                            setShowLikesOnHover(false);
+                            setShowLikesModal(true);
+                          }}
+                          className="w-full text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium py-1"
+                        >
+                          View all {likes.length} likes
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ) : (
             <span className="ml-1">Be the first to like</span>
           )}
@@ -411,7 +514,7 @@ const PostCard = ({ post, onLike, onShare }) => {
 
             <motion.button
               whileTap={{ scale: 0.88 }}
-              onClick={(e) => { e.stopPropagation(); setShowReactions(!showReactions); }}
+              onClick={(e) => { e.stopPropagation(); handleLike("like"); }}
               className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all text-sm font-medium ${
                 isLiked
                   ? `${reactions.find(r => r.name === currentReaction)?.color || "text-red-500"} ${reactions.find(r => r.name === currentReaction)?.bg || "bg-red-50"} dark:bg-opacity-20`
@@ -469,7 +572,11 @@ const PostCard = ({ post, onLike, onShare }) => {
     {/* Likes Modal */}
     <LikesModal
       isOpen={showLikesModal}
-      onClose={() => setShowLikesModal(false)}
+      onClose={() => {
+        setShowLikesModal(false);
+        setShowLikesOnHover(false);
+        if (likeCountTimeoutRef.current) clearTimeout(likeCountTimeoutRef.current);
+      }}
       likes={likes}
       likesByReaction={likesByReaction}
       likesCount={likesCount}

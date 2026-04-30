@@ -13,6 +13,7 @@ import {
   ChevronRight, Loader2, CheckCircle2, Globe, Users,
   MessageSquare, Trash2, AlertTriangle,
 } from "lucide-react";
+import ChangePassword from "../components/ChangePassword";
 
 /* ── Reusable setting row ── */
 const SettingRow = ({ icon: Icon, label, description, children, danger }) => (
@@ -81,6 +82,7 @@ const Settings = () => {
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [showBlocked,    setShowBlocked]    = useState(false);
   const [activeSection,  setActiveSection]  = useState("appearance");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Fetch notification preferences on mount
   useEffect(() => {
@@ -196,7 +198,7 @@ const Settings = () => {
         {/* ── Sidebar Nav (horizontal on mobile, vertical on large) ── */}
         <div className="flex flex-wrap gap-2 mb-5">
           {sections.map(({ key, label, icon: Icon }) => (
-            <button key={key} onClick={() => setActiveSection(key)}
+            <button key={key} onClick={() => { setActiveSection(key); setIsChangingPassword(false); }}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition ${
                 activeSection === key
                   ? "text-white"
@@ -371,11 +373,11 @@ const Settings = () => {
           )}
 
           {/* ── ACCOUNT ── */}
-          {activeSection === "account" && (
+          {activeSection === "account" && !isChangingPassword && (
             <motion.div key="account" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <Section title="Account">
                 <SettingRow icon={Lock} label="Change Password" description="Update your account password">
-                  <button onClick={() => navigate("/forgot-password")}
+                  <button onClick={() => setIsChangingPassword(true)}
                     className="flex items-center gap-1 text-sm text-purple-600 dark:text-purple-400 font-medium hover:underline">
                     Change <ChevronRight size={14} />
                   </button>
@@ -397,6 +399,11 @@ const Settings = () => {
                 <AlertTriangle size={11} /> Account deletion is irreversible and cannot be undone.
               </p>
             </motion.div>
+          )}
+
+          {/* ── CHANGE PASSWORD SUB-VIEW ── */}
+          {activeSection === "account" && isChangingPassword && (
+            <ChangePassword onBack={() => setIsChangingPassword(false)} />
           )}
         </AnimatePresence>
       </div>

@@ -150,7 +150,11 @@ const Notifications = () => {
                               {notif.sender?.username}
                             </Link>{" "}
                             <span className="text-slate-600 dark:text-slate-400">
-                              {notif.message || `${notif.type} your post`}
+                              {notif.message || (
+                                notif.type === "follow" ? "started following you" : 
+                                notif.type === "comment" ? "commented on your post" :
+                                `${notif.type}d your post`
+                              )}
                             </span>
                           </p>
 

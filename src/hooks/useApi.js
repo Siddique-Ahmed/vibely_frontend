@@ -48,9 +48,9 @@ export const useCreatePost = () => {
     mutationFn: (formData) =>
       apiClient.post("/posts/create", formData).then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
-      queryClient.invalidateQueries({ queryKey: ["myPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["myPosts"], exact: false });
     },
   });
 };
@@ -62,7 +62,7 @@ export const useUpdatePost = () => {
     mutationFn: ({ postId, data }) =>
       apiClient.put(`/posts/update/${postId}`, data).then((res) => res.data),
     onSuccess: (_, { postId }) => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
     },
   });
@@ -75,9 +75,9 @@ export const useDeletePost = () => {
     mutationFn: (postId) =>
       apiClient.delete(`/posts/delete/${postId}`).then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
-      queryClient.invalidateQueries({ queryKey: ["myPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["myPosts"], exact: false });
     },
   });
 };
@@ -89,8 +89,8 @@ export const useSharePost = () => {
     mutationFn: (postId) =>
       apiClient.post(`/posts/share/${postId}`).then((res) => res.data),
     onSuccess: (_, postId) => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
     },
   });
@@ -180,7 +180,10 @@ export const useCreateComment = () => {
         .post(`/comments/create/${postId}`, { content, parentCommentId })
         .then((res) => res.data),
     onSuccess: (_, { postId }) => {
-      queryClient.invalidateQueries({ queryKey: ["comments", postId] });
+      queryClient.invalidateQueries({ queryKey: ["comments", postId], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["post", postId] });
+      queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
     },
   });
 };
@@ -194,7 +197,9 @@ export const useUpdateComment = () => {
         .put(`/comments/update/${commentId}`, { content })
         .then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments"] });
+      queryClient.invalidateQueries({ queryKey: ["comments"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
     },
   });
 };
@@ -206,7 +211,9 @@ export const useDeleteComment = () => {
     mutationFn: (commentId) =>
       apiClient.delete(`/comments/delete/${commentId}`).then((res) => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments"] });
+      queryClient.invalidateQueries({ queryKey: ["comments"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
     },
   });
 };
@@ -235,8 +242,8 @@ export const useToggleLike = () => {
         .then((res) => res.data),
     onSuccess: (_, { targetId, targetType }) => {
       queryClient.invalidateQueries({ queryKey: ["likes", targetId] });
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
       if (targetType === "Post") {
         queryClient.invalidateQueries({ queryKey: ["post", targetId] });
       }
@@ -276,9 +283,9 @@ export const useToggleBookmark = () => {
     mutationFn: (postId) =>
       apiClient.put(`/bookmarks/toggle/${postId}`).then((res) => res.data),
     onSuccess: (_, postId) => {
-      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["post", postId] });
     },
   });
