@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector, useDispatch } from "react-redux";
 import { setUser } from "../redux/slices/authSlice";
-import { useToggleFollow, useUpdateProfile, useBookmarks } from "../hooks/useApi";
+import { useToggleFollow, useUpdateProfile, useUpdatePrivacySettings, useBookmarks, useNotificationPreferences, useUpdateNotificationPreferences } from "../hooks/useApi";
 import apiClient from "../services/apiClient";
 import MainLayout from "../components/layouts/MainLayout";
 import Sidebar from "../components/Sidebar";
@@ -15,12 +15,14 @@ import {
   Grid3X3, Bookmark, Heart, MessageCircle, UserPlus, UserCheck,
   MessageSquare, Camera, MapPin, Link2, CalendarDays, Loader2,
   PlusSquare, ImageOff, X, Save, Edit3, MoreHorizontal, Lock, Users,
+  Bell, BellOff, MessageCircleHeart, Heart as UserHeart, AtSign, ImageIcon,
 } from "lucide-react";
 
 /* ── Edit Profile Modal ─────────────────────────────────────── */
 const EditProfileModal = ({ profile, onClose, onSaved }) => {
   const dispatch = useDispatch();
-  const { mutate: updateProfile, isPending } = useUpdateProfile();
+  const { mutate: updateProfile, isPending: isProfilePending } = useUpdateProfile();
+  const { mutate: updatePrivacy, isPending: isPrivacyPending } = useUpdatePrivacySettings();
   const avatarRef = useRef();
   const coverRef  = useRef();
 
@@ -31,12 +33,20 @@ const EditProfileModal = ({ profile, onClose, onSaved }) => {
     website:      profile?.profile?.website    || "",
     gender:       profile?.profile?.gender     || "",
     username:     profile?.username            || "",
+  });
+  const [privacyForm, setPrivacyForm] = useState({
     is_private:   profile?.is_private          || false,
+    allow_follow: profile?.allow_follow        ?? true,
+    message_privacy: profile?.message_privacy   || "everyone",
+    who_can_see_followers: profile?.who_can_see_followers || "everyone",
+    who_can_see_following: profile?.who_can_see_following || "everyone",
   });
   const [avatarPreview, setAvatarPreview] = useState(profile?.profile?.profile_picture || null);
   const [coverPreview,  setCoverPreview]  = useState(profile?.profile?.cover_picture   || null);
   const [avatarFile, setAvatarFile] = useState(null);
   const [coverFile,  setCoverFile]  = useState(null);
+
+  const isPending = isProfilePending || isPrivacyPending;
 
   const pick = (file, type) => {
     if (!file) return;
@@ -46,15 +56,26 @@ const EditProfileModal = ({ profile, onClose, onSaved }) => {
   };
 
   const handleSave = () => {
+    // Update profile data (non-privacy fields)
     const fd = new FormData();
     Object.entries(form).forEach(([k, v]) => { if (v !== undefined) fd.append(k, v); });
     if (avatarFile) fd.append("profile_picture", avatarFile);
     if (coverFile)  fd.append("cover_picture",   coverFile);
+    
     updateProfile(fd, {
       onSuccess: (res) => {
         const updated = res?.data || res;
         dispatch(setUser(updated));
         onSaved(updated);
+      },
+    });
+
+    // Update privacy settings
+    updatePrivacy(privacyForm, {
+      onSuccess: (res) => {
+        const updatedPrivacy = res?.data || res;
+        dispatch(setUser({ ...profile, ...updatedPrivacy }));
+        onSaved({ ...profile, ...updatedPrivacy });
         onClose();
       },
     });
@@ -162,20 +183,204 @@ const EditProfileModal = ({ profile, onClose, onSaved }) => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setForm((p) => ({ ...p, is_private: !p.is_private }))}
+                  onClick={() => setPrivacyForm((p) => ({ ...p, is_private: !p.is_private }))}
                   className={`relative w-14 h-8 rounded-full transition-colors ${
-                    form.is_private
+                    privacyForm.is_private
                       ? "bg-purple-600"
                       : "bg-slate-300 dark:bg-slate-600"
                   }`}
                 >
                   <motion.div
-                    animate={{ x: form.is_private ? 28 : 2 }}
+                    animate={{ x: privacyForm.is_private ? 28 : 2 }}
                     className="w-6 h-6 bg-white rounded-full shadow-md"
                   />
                 </motion.button>
               </div>
             </div>
+
+            {/* Allow Follow Toggle */}
+            <div className="flex items-center justify-between mt-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Users size={14} className="text-slate-500" />
+                  Allow Others to Follow
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  People can follow your account
+                </p>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setPrivacyForm((p) => ({ ...p, allow_follow: !p.allow_follow }))}
+                className={`relative w-14 h-8 rounded-full transition-colors ${
+                  privacyForm.allow_follow
+                    ? "bg-purple-600"
+                    : "bg-slate-300 dark:bg-slate-600"
+                }`}
+              >
+                <motion.div
+                  animate={{ x: privacyForm.allow_follow ? 28 : 2 }}
+                  className="w-6 h-6 bg-white rounded-full shadow-md"
+                />
+              </motion.button>
+            </div>
+
+            {/* Message Privacy */}
+            <div className="mt-4">
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
+                Who can message you
+              </label>
+              <select
+                value={privacyForm.message_privacy}
+                onChange={(e) => setPrivacyForm((p) => ({ ...p, message_privacy: e.target.value }))}
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition"
+              >
+                <option value="everyone">Everyone</option>
+                <option value="followers">Followers only</option>
+                <option value="no_one">No one</option>
+              </select>
+            </div>
+
+            {/* Followers Visibility */}
+            <div className="mt-4">
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
+                Who can see your followers
+              </label>
+              <select
+                value={privacyForm.who_can_see_followers}
+                onChange={(e) => setPrivacyForm((p) => ({ ...p, who_can_see_followers: e.target.value }))}
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition"
+              >
+                <option value="everyone">Everyone</option>
+                <option value="followers">Followers only</option>
+                <option value="no_one">Only me</option>
+              </select>
+            </div>
+
+            {/* Following Visibility */}
+            <div className="mt-4">
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">
+                Who can see your following
+              </label>
+              <select
+                value={privacyForm.who_can_see_following}
+                onChange={(e) => setPrivacyForm((p) => ({ ...p, who_can_see_following: e.target.value }))}
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition"
+              >
+                <option value="everyone">Everyone</option>
+                <option value="followers">Followers only</option>
+                <option value="no_one">Only me</option>
+              </select>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+/* ── Notification Settings Modal ───────────────────────────── */
+const NotificationSettingsModal = ({ preferences, onClose, onSaved }) => {
+  const { data, isLoading } = useNotificationPreferences();
+  const { mutate: updatePreferences, isPending } = useUpdateNotificationPreferences();
+
+  const [settings, setSettings] = useState(
+    preferences?.notification_preferences || 
+    data?.data || 
+    {
+      likes: true,
+      comments: true,
+      follows: true,
+      mentions: true,
+      posts: true,
+      messages: true,
+    }
+  );
+
+  const handleSave = () => {
+    updatePreferences(settings, {
+      onSuccess: (res) => {
+        const updated = res?.data || res;
+        onSaved(updated);
+        onClose();
+      },
+    });
+  };
+
+  const toggleSetting = (key) => {
+    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const notificationTypes = [
+    { key: "likes", label: "Likes", description: "When someone likes your post", icon: Heart },
+    { key: "comments", label: "Comments", description: "When someone comments on your post", icon: MessageCircle },
+    { key: "follows", label: "Follows", description: "When someone follows you", icon: UserPlus },
+    { key: "mentions", label: "Mentions", description: "When someone mentions you", icon: AtSign },
+    { key: "posts", label: "New Posts", description: "When someone you follow posts", icon: ImageIcon },
+    { key: "messages", label: "Messages", description: "When you receive a new message", icon: MessageCircleHeart },
+  ];
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+      >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden"
+        >
+          {/* Modal Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <Bell size={20} className="text-purple-600" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Notification Settings</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <motion.button whileTap={{ scale: 0.95 }} onClick={handleSave} disabled={isPending}
+                className="flex items-center gap-2 px-4 py-2 text-white text-sm font-medium rounded-xl transition disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg,#7C3AED,#EC4899)" }}>
+                {isPending ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                {isPending ? "Saving…" : "Save"}
+              </motion.button>
+              <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                <X size={18} className="text-slate-500" />
+              </button>
+            </div>
+          </div>
+
+          {/* Notification Settings List */}
+          <div className="p-4 space-y-3 overflow-y-auto max-h-[60vh]">
+            {notificationTypes.map(({ key, label, description, icon: Icon }) => (
+              <div key={key} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <Icon size={18} className="text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{label}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{description}</p>
+                  </div>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => toggleSetting(key)}
+                  className={`relative w-14 h-8 rounded-full transition-colors ${
+                    settings[key]
+                      ? "bg-purple-600"
+                      : "bg-slate-300 dark:bg-slate-600"
+                  }`}
+                >
+                  <motion.div
+                    animate={{ x: settings[key] ? 28 : 2 }}
+                    className="w-6 h-6 bg-white rounded-full shadow-md"
+                  />
+                </motion.button>
+              </div>
+            ))}
           </div>
         </motion.div>
       </motion.div>
@@ -337,6 +542,7 @@ const Profile = () => {
   const [showBlockReport, setShowBlockReport]  = useState(false);
   const [showMoreMenu,    setShowMoreMenu]      = useState(false);
   const [userList,        setUserList]          = useState(null); // { title, type }
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
 
   const isOwn = currentUser?._id === userId;
 
@@ -476,6 +682,12 @@ const Profile = () => {
                       <PlusSquare size={15} />
                       <span className="hidden sm:inline">New Post</span>
                     </motion.button>
+                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                      onClick={() => setShowNotificationSettings(true)}
+                      className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-white rounded-xl font-medium text-sm transition">
+                      <Bell size={15} />
+                      <span className="hidden sm:inline">Notifications</span>
+                    </motion.button>
                   </>
                 ) : (
                   <>
@@ -562,14 +774,14 @@ const Profile = () => {
                 { 
                   label: "Followers", 
                   value: profile?.followers_count || 0, 
-                  onClick: (isOwn || !profile?.is_private || isFollowing) 
+                  onClick: (isOwn || profile?.who_can_see_followers === "everyone" || (profile?.who_can_see_followers === "followers" && isFollowing)) 
                     ? () => setUserList({ title: "Followers", type: "followers" }) 
                     : null 
                 },
                 { 
                   label: "Following", 
                   value: profile?.following_count || 0, 
-                  onClick: (isOwn || !profile?.is_private || isFollowing) 
+                  onClick: (isOwn || profile?.who_can_see_following === "everyone" || (profile?.who_can_see_following === "followers" && isFollowing)) 
                     ? () => setUserList({ title: "Following", type: "following" }) 
                     : null 
                 },
@@ -706,6 +918,15 @@ const Profile = () => {
           profile={profile}
           onClose={() => setShowEdit(false)}
           onSaved={(updated) => setProfile((p) => ({ ...p, ...updated, profile: { ...p?.profile, ...updated?.profile } }))}
+        />
+      )}
+
+      {/* Notification Settings Modal */}
+      {showNotificationSettings && (
+        <NotificationSettingsModal
+          preferences={profile}
+          onClose={() => setShowNotificationSettings(false)}
+          onSaved={(updated) => setProfile((p) => ({ ...p, notification_preferences: updated }))}
         />
       )}
 

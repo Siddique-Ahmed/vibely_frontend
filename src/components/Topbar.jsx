@@ -82,11 +82,11 @@ const Topbar = ({ onCreatePost }) => {
     <motion.header
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="h-[60px]"
+      className="w-full relative"
     >
-      <div className="h-full max-w-7xl mx-auto px-4 flex items-center justify-between gap-4">
+      <div className="h-[60px] max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between gap-2 sm:gap-4">
         {/* Mobile Logo */}
-        <Link to="/feed" className="md:hidden flex items-center gap-2 flex-shrink-0">
+        <Link to="/feed" className="md:hidden flex items-center gap-1.5 flex-shrink-0">
           <div
             style={{
               padding: "2px",
@@ -102,7 +102,7 @@ const Topbar = ({ onCreatePost }) => {
             </div>
           </div>
           <span
-            className="text-lg font-black"
+            className="text-base sm:text-lg font-black"
             style={{
               background: "linear-gradient(90deg, #7C3AED, #EC4899, #F97316)",
               WebkitBackgroundClip: "text",
@@ -171,23 +171,23 @@ const Topbar = ({ onCreatePost }) => {
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           {/* Mobile Search Toggle */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setMobileSearch(!mobileSearch)}
-            className="md:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition text-slate-600 dark:text-slate-300"
+            className="md:hidden p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition text-slate-600 dark:text-slate-300"
           >
-            {mobileSearch ? <X size={20} /> : <Search size={20} />}
+            {mobileSearch ? <X size={18} /> : <Search size={18} />}
           </motion.button>
 
           {/* Notifications */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => navigate("/notifications")}
-            className="relative p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition text-slate-600 dark:text-slate-300"
+            className="relative p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition text-slate-600 dark:text-slate-300"
           >
-            <Bell size={20} strokeWidth={1.8} />
+            <Bell size={18} strokeWidth={1.8} />
             {unreadCount > 0 && (
               <span
                 className="absolute top-1 right-1 text-white text-[9px] rounded-full min-w-[16px] h-4 flex items-center justify-center font-bold px-0.5"
@@ -201,9 +201,10 @@ const Topbar = ({ onCreatePost }) => {
           {/* Messages */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition text-slate-600 dark:text-slate-300"
+            onClick={()=>navigate("/messages")}
+            className="p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition text-slate-600 dark:text-slate-300"
           >
-            <MessageCircle size={20} strokeWidth={1.8} />
+            <MessageCircle size={18} strokeWidth={1.8} />
           </motion.button>
 
           {/* Dark Mode */}
@@ -225,7 +226,7 @@ const Topbar = ({ onCreatePost }) => {
               <img
                 src={user?.profile?.profile_picture || "/avatar.png"}
                 alt={user?.username}
-                className="w-8 h-8 rounded-full object-cover"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
                 style={{ border: "2px solid transparent", boxShadow: "0 0 0 2px #EC4899" }}
               />
               <ChevronDown
@@ -287,12 +288,12 @@ const Topbar = ({ onCreatePost }) => {
       <AnimatePresence>
         {mobileSearch && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="md:hidden border-t border-slate-200 dark:border-slate-800 overflow-hidden"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="md:hidden absolute top-full left-0 right-0 bg-white dark:bg-[rgba(10,0,16,0.98)] backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 shadow-xl z-50"
           >
-            <div ref={searchRef} className="relative p-3">
+            <div ref={searchRef} className="relative p-3 pt-0">
               <Search
                 size={16}
                 className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400"

@@ -4,8 +4,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSelector } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  usePost, useComments, useCreateComment, useToggleLike, useToggleBookmark, useSharePost,
+  usePost, useComments, useCreateComment, useToggleLike, useToggleBookmark, useSharePost, useDeletePost
 } from "../hooks/useApi";
+import DeleteConfirmModal from "../components/posts/DeleteConfirmModal";
+import EditPostModal from "../components/EditPostModal";
 import { formatTimeAgo } from "../utils/formatters";
 import MainLayout from "../components/layouts/MainLayout";
 import Sidebar from "../components/Sidebar";
@@ -18,31 +20,50 @@ import {
 import { useRef, useEffect } from "react";
 
 const reactions = [
-  { name: "like",  label: "Like",  emoji: "👍", color: "text-blue-500",   bg: "bg-blue-50" },
-  { name: "love",  label: "Love",  emoji: "❤️", color: "text-red-500",    bg: "bg-red-50" },
-  { name: "haha",  label: "Haha",  emoji: "😂", color: "text-yellow-500", bg: "bg-yellow-50" },
-  { name: "wow",   label: "Wow",   emoji: "😮", color: "text-yellow-500", bg: "bg-yellow-50" },
-  { name: "sad",   label: "Sad",   emoji: "😢", color: "text-blue-400",   bg: "bg-blue-50" },
+  { name: "like", label: "Like", emoji: "👍", color: "text-blue-500", bg: "bg-blue-50" },
+  { name: "love", label: "Love", emoji: "❤️", color: "text-red-500", bg: "bg-red-50" },
+  { name: "haha", label: "Haha", emoji: "😂", color: "text-yellow-500", bg: "bg-yellow-50" },
+  { name: "wow", label: "Wow", emoji: "😮", color: "text-yellow-500", bg: "bg-yellow-50" },
+  { name: "sad", label: "Sad", emoji: "😢", color: "text-blue-400", bg: "bg-blue-50" },
   { name: "angry", label: "Angry", emoji: "😠", color: "text-orange-600", bg: "bg-orange-50" },
 ];
 
 // ─── CommentItem ─────────────────────────────────────────────────────────────
-const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onReply = () => {} }) => {
-  const [showReactions, setShowReactions]     = useState(false);
-  const [isLiked, setIsLiked]                 = useState(!!comment.isLiked);
+const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onReply = () => { } }) => {
+  const [showReactions, setShowReactions] = useState(false);
+  const [isLiked, setIsLiked] = useState(!!comment.isLiked);
   const [currentReaction, setCurrentReaction] = useState(
     comment.reaction_type || (comment.isLiked ? "like" : null)
   );
-  const [likesCount, setLikesCount]           = useState(Number(comment.likes_count) || 0);
-  const [likes, setLikes]                     = useState(comment.likes || []);
+  const [likesCount, setLikesCount] = useState(Number(comment.likes_count) || 0);
+  const [likes, setLikes] = useState(comment.likes || []);
   const [likesByReaction, setLikesByReaction] = useState(comment.likesByReaction || {});
-  const [showReplyInput, setShowReplyInput]   = useState(false);
-  const [replyText, setReplyText]             = useState("");
-  const [isSendingReply, setIsSendingReply]   = useState(false);
-  const [showReplies, setShowReplies]         = useState(false);
-  const [showLikesModal, setShowLikesModal]   = useState(false);
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [isSendingReply, setIsSendingReply] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
+  const [showLikesModal, setShowLikesModal] = useState(false);
+  const [isCommentLikingPending, setIsCommentLikingPending] = useState(false);
 
-  const reactionTimeoutRef  = useRef(null);
+  const reactionTimeoutRef = useRef(null);
+  const longPressTimerRef = useRef(null);
+
+  const handleTouchStart = () => {
+    longPressTimerRef.current = setTimeout(() => {
+      setShowReactions(true);
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+  };
 
   // Sync when comment prop changes (e.g. after refetch)
   useEffect(() => {
@@ -54,11 +75,16 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
   }, [comment._id, comment.isLiked, comment.reaction_type, comment.likes_count]);
 
   const handleLike = (reactionType = "like") => {
-    const wasLiked     = isLiked;
+    // Prevent double mutations while one is pending
+    if (isCommentLikingPending) return;
+
+    const wasLiked = isLiked;
     const prevReaction = currentReaction;
-    const prevCount    = likesCount;
-    const prevLikes    = likes;
+    const prevCount = likesCount;
+    const prevLikes = likes;
     const prevByReaction = likesByReaction;
+
+    setIsCommentLikingPending(true);
 
     if (wasLiked && prevReaction === reactionType) {
       // ── Unlike ──
@@ -78,6 +104,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
               setLikes(res.comment.likes || []);
               setLikesByReaction(res.comment.likesByReaction || {});
             }
+            setIsCommentLikingPending(false);
           },
           onError: () => {
             setIsLiked(wasLiked);
@@ -85,6 +112,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
             setLikesCount(prevCount);
             setLikes(prevLikes);
             setLikesByReaction(prevByReaction);
+            setIsCommentLikingPending(false);
           },
         }
       );
@@ -106,6 +134,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
               setLikes(res.comment.likes || []);
               setLikesByReaction(res.comment.likesByReaction || {});
             }
+            setIsCommentLikingPending(false);
           },
           onError: () => {
             setIsLiked(wasLiked);
@@ -113,6 +142,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
             if (!wasLiked) setLikesCount(prevCount);
             setLikes(prevLikes);
             setLikesByReaction(prevByReaction);
+            setIsCommentLikingPending(false);
           },
         }
       );
@@ -163,6 +193,12 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
                 clearTimeout(reactionTimeoutRef.current);
                 setShowReactions(false);
               }}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onTouchMove={handleTouchMove}
+              onContextMenu={(e) => {
+                if (window.innerWidth < 1024) e.preventDefault();
+              }}
             >
               <AnimatePresence>
                 {showReactions && (
@@ -191,9 +227,8 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
 
               <button
                 onClick={() => handleLike(currentReaction || "like")}
-                className={`text-[10px] font-bold transition hover:underline ${
-                  isLiked ? reactionData.color : "text-slate-500"
-                }`}
+                className={`text-[10px] font-bold transition hover:underline ${isLiked ? reactionData.color : "text-slate-500"
+                  }`}
               >
                 {isLiked && currentReaction !== "like" ? reactionData.label : "Like"}
               </button>
@@ -247,11 +282,10 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
                   whileTap={{ scale: 0.9 }}
                   onClick={handleReply}
                   disabled={!replyText.trim() || isSendingReply}
-                  className={`flex-shrink-0 p-1 rounded-full transition ${
-                    replyText.trim()
+                  className={`flex-shrink-0 p-1 rounded-full transition ${replyText.trim()
                       ? "hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400"
                       : "text-slate-400 cursor-not-allowed"
-                  }`}
+                    }`}
                 >
                   {isSendingReply ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -315,29 +349,53 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
 
 // ─── PostDetail ───────────────────────────────────────────────────────────────
 const PostDetail = () => {
-  const { postId }    = useParams();
-  const navigate      = useNavigate();
-  const queryClient   = useQueryClient();
+  const { postId } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user: currentUser } = useSelector((s) => s.auth);
 
-  const { data: postData,     isLoading }        = usePost(postId);
+  const { data: postData, isLoading } = usePost(postId);
   const { data: commentsData, isLoading: commentsLoading } = useComments(postId, 1, 50);
   const { mutate: createComment, isPending: sending } = useCreateComment();
-  const { mutate: toggleLike }     = useToggleLike();
+  const { mutate: toggleLike } = useToggleLike();
   const { mutate: toggleBookmark } = useToggleBookmark();
-  const { mutate: sharePost }      = useSharePost();
+  const { mutate: sharePost } = useSharePost();
+  const { mutate: deletePost } = useDeletePost();
 
   const [commentText, setCommentText] = useState("");
-  const [copied, setCopied]           = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const post = postData?.data ?? postData;
 
-  const [isLiked,         setIsLiked]         = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
   const [currentReaction, setCurrentReaction] = useState(null);
-  const [likesCount,      setLikesCount]      = useState(0);
-  const [isBookmarked,    setIsBookmarked]    = useState(false);
-  const [showReactions,   setShowReactions]   = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
+  const [isLikingPending, setIsLikingPending] = useState(false);
   const reactionTimeoutRef = useRef(null);
+  const longPressTimerRef = useRef(null);
+
+  const handleTouchStart = () => {
+    longPressTimerRef.current = setTimeout(() => {
+      setShowReactions(true);
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+  };
 
   // Sync post state whenever post data changes
   useEffect(() => {
@@ -383,10 +441,44 @@ const PostDetail = () => {
     });
   };
 
+  const handleEdit = () => {
+    setShowEditModal(true);
+    setShowOptions(false);
+  };
+
+  const handleDelete = () => {
+    setShowDeleteModal(true);
+    setShowOptions(false);
+  };
+
+  const handleConfirmDelete = () => {
+    setIsDeleting(true);
+    deletePost(postId, {
+      onSuccess: () => {
+        setIsDeleting(false);
+        setShowDeleteModal(false);
+        navigate(-1); // Go back after deleting
+      },
+      onError: () => {
+        setIsDeleting(false);
+      },
+    });
+  };
+
+  const handleEditSuccess = () => {
+    // Post will be refetched by React Query
+    setShowEditModal(false);
+  };
+
   const handleLike = (reactionType = "like") => {
-    const wasLiked     = isLiked;
+    // Prevent double mutations while one is pending
+    if (isLikingPending) return;
+
+    const wasLiked = isLiked;
     const prevReaction = currentReaction;
-    const prevCount    = likesCount;
+    const prevCount = likesCount;
+
+    setIsLikingPending(true);
 
     if (wasLiked && prevReaction === reactionType) {
       // ── Unlike ──
@@ -398,19 +490,19 @@ const PostDetail = () => {
         { targetId: postId, targetType: "Post", reactionType },
         {
           onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["post", postId] });
-            queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
             const res = data?.data?.post || data?.data || {};
             if (res.likes_count !== undefined) {
               setIsLiked(!!(res.isLiked ?? res.is_liked));
               setCurrentReaction(res.reaction_type || null);
               setLikesCount(Number(res.likes_count));
             }
+            setIsLikingPending(false);
           },
           onError: () => {
             setIsLiked(true);
             setCurrentReaction(prevReaction);
             setLikesCount(prevCount);
+            setIsLikingPending(false);
           },
         }
       );
@@ -424,19 +516,19 @@ const PostDetail = () => {
         { targetId: postId, targetType: "Post", reactionType },
         {
           onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["post", postId] });
-            queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
             const res = data?.data?.post || data?.data || {};
             if (res.likes_count !== undefined) {
               setIsLiked(!!(res.isLiked ?? res.is_liked ?? true));
               setCurrentReaction(res.reaction_type || reactionType);
               setLikesCount(Number(res.likes_count));
             }
+            setIsLikingPending(false);
           },
           onError: () => {
             setIsLiked(wasLiked);
             setCurrentReaction(prevReaction);
             setLikesCount(prevCount);
+            setIsLikingPending(false);
           },
         }
       );
@@ -535,9 +627,48 @@ const PostDetail = () => {
                     <p className="text-xs text-slate-500">{formatTimeAgo(post.createdAt)}</p>
                   </div>
                 </Link>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition">
-                  <MoreHorizontal size={18} className="text-slate-500" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowOptions(!showOptions)}
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition"
+                  >
+                    <MoreHorizontal size={18} className="text-slate-500" />
+                  </button>
+
+                  <AnimatePresence>
+                    {showOptions && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: -8 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="absolute right-0 top-10 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-20 min-w-[150px]"
+                      >
+                        <button
+                          onClick={handleShare}
+                          className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                        >
+                          Copy Link
+                        </button>
+                        {currentUser?._id === post.created_by?._id && (
+                          <>
+                            <button
+                              onClick={handleEdit}
+                              className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                            >
+                              Edit Post
+                            </button>
+                            <button
+                              onClick={handleDelete}
+                              className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition font-medium border-t border-slate-100 dark:border-slate-700 mt-1 pt-2.5"
+                            >
+                              Delete Post
+                            </button>
+                          </>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               {/* Caption */}
@@ -594,6 +725,12 @@ const PostDetail = () => {
                       clearTimeout(reactionTimeoutRef.current);
                       setShowReactions(false);
                     }}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchMove}
+                    onContextMenu={(e) => {
+                      if (window.innerWidth < 1024) e.preventDefault();
+                    }}
                   >
                     <AnimatePresence>
                       {showReactions && (
@@ -636,11 +773,10 @@ const PostDetail = () => {
                         e.stopPropagation();
                         handleLike(currentReaction || "like");
                       }}
-                      className={`flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl ${
-                        isLiked
+                      className={`flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl ${isLiked
                           ? `${activeReactionData?.color || "text-pink-500"} ${activeReactionData?.bg || "bg-pink-50"} dark:bg-opacity-20`
                           : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      }`}
+                        }`}
                     >
                       {isLiked && currentReaction !== "like" ? (
                         <span className="text-xl">{activeReactionData?.emoji}</span>
@@ -660,11 +796,10 @@ const PostDetail = () => {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={handleShare}
-                    className={`flex items-center gap-1.5 transition ${
-                      copied
+                    className={`flex items-center gap-1.5 transition ${copied
                         ? "text-green-500"
                         : "text-slate-600 dark:text-slate-400 hover:text-orange-500"
-                    }`}
+                      }`}
                   >
                     {copied ? <Check size={20} /> : <Share2 size={20} />}
                     <span className="text-sm font-medium">{post.shares_count || 0}</span>
@@ -674,11 +809,10 @@ const PostDetail = () => {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={handleToggleBookmark}
-                    className={`ml-auto transition ${
-                      isBookmarked
+                    className={`ml-auto transition ${isBookmarked
                         ? "text-yellow-500"
                         : "text-slate-600 dark:text-slate-400 hover:text-yellow-500"
-                    }`}
+                      }`}
                   >
                     <Bookmark size={22} className={isBookmarked ? "fill-yellow-500" : ""} />
                   </motion.button>
@@ -721,6 +855,20 @@ const PostDetail = () => {
           </div>
         </motion.div>
       </div>
+
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => !isDeleting && setShowDeleteModal(false)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+      />
+
+      <EditPostModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        post={post}
+        onSuccess={handleEditSuccess}
+      />
     </MainLayout>
   );
 };

@@ -26,6 +26,7 @@ import Explore       from "./pages/Explore";
 import PostDetail    from "./pages/PostDetail";
 import Settings      from "./pages/Settings";
 import Bookmarks     from "./pages/Bookmarks";
+import Messages      from "./pages/Messages";
 
 const AppWrapper = () => (
   <Provider store={store}>
@@ -99,6 +100,10 @@ const App = () => {
       <Route
         path="/bookmarks"
         element={<ProtectedRoute><Bookmarks /></ProtectedRoute>}
+      />
+      <Route
+        path="/messages"
+        element={<ProtectedRoute><Messages /></ProtectedRoute>}
       />
 
       {/* ── Root ── */}

@@ -22,7 +22,15 @@ apiClient.interceptors.request.use(
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];
     }
-    
+    // DEBUG: log outgoing /likes/toggle payloads
+    try {
+      if (config && config.method === "post" && config.url && config.url.includes("/likes/toggle")) {
+        console.debug("[apiClient] Outgoing /likes/toggle body:", config.data);
+      }
+    } catch (e) {
+      // ignore
+    }
+
     return config;
   },
   (error) => Promise.reject(error),
@@ -56,6 +64,7 @@ apiClient.interceptors.response.use(
 
     // Don't try to refresh if the failing call IS the refresh endpoint itself
     if (originalRequest.url?.includes("/users/refresh-token")) {
+      console.log("[apiClient] 401 on refresh token endpoint — logging out");
       forceLogout();
       return Promise.reject(error);
     }
@@ -75,11 +84,20 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      // The refreshToken is an httpOnly cookie — sent automatically via withCredentials
-      const res = await apiClient.post("/users/refresh-token");
+      console.log("[apiClient] Attempting to refresh access token...");
+      
+      // Use bare axios to avoid triggering apiClient's own interceptors (which would attach the expired token)
+      const res = await axios.post(
+        `${API_BASE_URL}/users/refresh-token`,
+        {},
+        { withCredentials: true }
+      );
+      
       const newToken = res.data?.data?.accessToken || res.data?.accessToken;
 
       if (!newToken) throw new Error("No access token in refresh response");
+
+      console.log("[apiClient] Token refreshed successfully.");
 
       // Persist the new token
       localStorage.setItem("token", newToken);
@@ -105,6 +123,7 @@ apiClient.interceptors.response.use(
       return apiClient(originalRequest);
 
     } catch (refreshError) {
+      console.error("[apiClient] Refresh token failed:", refreshError.message);
       // Refresh token is expired or invalid — force logout
       processQueue(refreshError, null);
       forceLogout();

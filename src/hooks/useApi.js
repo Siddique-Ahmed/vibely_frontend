@@ -41,6 +41,18 @@ export const useMyPosts = (page = 1, limit = 20) => {
   });
 };
 
+/** GET /api/v1/posts/user/:userId — posts for a specific user's profile */
+export const useUserProfilePosts = (profileOwnerId, page = 1, limit = 20) => {
+  return useQuery({
+    queryKey: ["userProfilePosts", profileOwnerId, page, limit],
+    queryFn: () =>
+      apiClient
+        .get(`/posts/user/${profileOwnerId}`, { params: { page, limit } })
+        .then((res) => res.data),
+    enabled: !!profileOwnerId,
+  });
+};
+
 /** POST /api/v1/posts/create */
 export const useCreatePost = () => {
   const queryClient = useQueryClient();
@@ -153,6 +165,44 @@ export const useUpdateProfile = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myProfile"] });
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+    },
+  });
+};
+
+/** POST /api/v1/users/update-privacy-settings */
+export const useUpdatePrivacySettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (privacyData) =>
+      apiClient
+        .post("/users/update-privacy-settings", privacyData)
+        .then((res) => res.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+    },
+  });
+};
+
+/** GET /api/v1/users/notification-preferences */
+export const useNotificationPreferences = () => {
+  return useQuery({
+    queryKey: ["notificationPreferences"],
+    queryFn: () =>
+      apiClient.get("/users/notification-preferences").then((res) => res.data),
+  });
+};
+
+/** PUT /api/v1/users/notification-preferences */
+export const useUpdateNotificationPreferences = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (preferences) =>
+      apiClient
+        .put("/users/notification-preferences", preferences)
+        .then((res) => res.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notificationPreferences"] });
     },
   });
 };

@@ -1,7 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
-import { useCreatePost } from "../hooks/useApi";
+import { useUpdatePost } from "../hooks/useApi";
 import {
   X,
   Image,
@@ -14,25 +14,22 @@ import {
   Users,
   UserCheck,
   Lock,
+  Edit3,
 } from "lucide-react";
 
-const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
+const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
   const { user } = useSelector((state) => state.auth);
-  const [caption,       setCaption]       = useState("");
-  const [mediaFiles,    setMediaFiles]    = useState([]);
-  const [mediaPreviews, setMediaPreviews] = useState([]);
-  const [location,      setLocation]      = useState("");      // display name shown in pill
-  const [locationData,  setLocationData]  = useState(null);    // full location data with coordinates
-  const [locationQuery, setLocationQuery] = useState("");      // search input text
+  const [caption, setCaption] = useState(post?.caption || "");
+  const [locationData, setLocationData] = useState(post?.location || null);
+  const [locationQuery, setLocationQuery] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState([]);
-  const [locationLoading,     setLocationLoading]     = useState(false);
-  const [showLocationInput,   setShowLocationInput]   = useState(false);
-  const [isPosting,     setIsPosting]     = useState(false);
-  const [step,          setStep]          = useState("compose");
-  const [visibility,   setVisibility]    = useState("public");
-  const fileInputRef   = useRef(null);
-  const locationTimer  = useRef(null);
-  const { mutate: createPost } = useCreatePost();
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [showLocationInput, setShowLocationInput] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [visibility, setVisibility] = useState(post?.visibility || "public");
+  const [step, setStep] = useState("compose");
+  const locationTimer = useRef(null);
+  const { mutate: updatePost } = useUpdatePost();
 
   const visibilityOptions = [
     { value: "public", label: "Public", icon: Globe, description: "Anyone can see" },
@@ -40,6 +37,15 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
     { value: "close_friends", label: "Close Friends", icon: UserCheck, description: "Only close friends can see" },
     { value: "private", label: "Private", icon: Lock, description: "Only you can see" },
   ];
+
+  // Initialize form with post data
+  useEffect(() => {
+    if (post) {
+      setCaption(post.caption || "");
+      setVisibility(post.visibility || "public");
+      setLocationData(post.location || null);
+    }
+  }, [post]);
 
   // Nominatim geocoder — free, no API key
   const searchLocation = (query) => {
@@ -61,8 +67,7 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const selectLocation = (place) => {
-    const displayName = place.display_name.split(",").slice(0, 3).join(", ");
-    setLocation(displayName);
+    const displayName = place.display_name.split(",").slice(0, 3).join(",");
     setLocationData({
       name: displayName,
       address: place.display_name,
@@ -75,84 +80,54 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
     setShowLocationInput(false);
   };
 
-  const handleMediaSelect = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length + mediaFiles.length > 10) {
-      alert("Maximum 10 media files allowed");
+  const handleUpdate = async () => {
+    if (!caption.trim()) {
       return;
     }
 
-    const newFiles = [...mediaFiles, ...files];
-    setMediaFiles(newFiles);
-
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setMediaPreviews((prev) => [
-          ...prev,
-          {
-            url: event.target.result,
-            type: file.type.startsWith("image") ? "image" : "video",
-            name: file.name,
-          },
-        ]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleRemoveMedia = (index) => {
-    setMediaFiles((prev) => prev.filter((_, i) => i !== index));
-    setMediaPreviews((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handlePost = async () => {
-    if (!caption.trim() && mediaFiles.length === 0) {
-      return;
-    }
-
-    setIsPosting(true);
+    setIsUpdating(true);
     try {
-      const formData = new FormData();
-      formData.append("caption", caption);
-      formData.append("visibility", visibility);
-      if (locationData) {
-        formData.append("location", JSON.stringify(locationData));
-      }
-      mediaFiles.forEach((file) => formData.append("media", file));
+      const updateData = {
+        caption: caption.trim(),
+        visibility,
+        location: locationData,
+      };
 
-      createPost(formData, {
-        onSuccess: () => {
-          onSuccess?.();
-          handleClose();
-        },
-        onError: (err) => {
-          console.error("Post error:", err);
-        },
-        onSettled: () => {
-          setIsPosting(false);
-        },
-      });
+      updatePost(
+        { postId: post._id, data: updateData },
+        {
+          onSuccess: (data) => {
+            onSuccess?.(data?.data || data);
+            handleClose();
+          },
+          onError: (err) => {
+            console.error("Update post error:", err);
+          },
+          onSettled: () => {
+            setIsUpdating(false);
+          },
+        }
+      );
     } catch (err) {
-      setIsPosting(false);
+      setIsUpdating(false);
     }
   };
 
   const handleClose = () => {
     setCaption("");
-    setMediaFiles([]);
-    setMediaPreviews([]);
-    setLocation("");
     setLocationData(null);
     setLocationQuery("");
     setLocationSuggestions([]);
     setShowLocationInput(false);
-    setIsPosting(false);
+    setIsUpdating(false);
     setVisibility("public");
     onClose();
   };
 
-  const canPost = caption.trim().length > 0 || mediaFiles.length > 0;
+  const canUpdate = caption.trim().length > 0;
+
+  // Get location display name
+  const locationDisplay = locationData?.name || locationData?.address || null;
 
   return (
     <AnimatePresence>
@@ -180,15 +155,18 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
               >
                 <X size={20} />
               </button>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Create Post</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Edit3 size={18} />
+                Edit Post
+              </h2>
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={handlePost}
-                disabled={!canPost || isPosting}
-                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold transition ${canPost && !isPosting ? "text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
-                style={canPost && !isPosting ? { background: "linear-gradient(135deg,#7C3AED,#EC4899)", boxShadow: "0 4px 14px rgba(124,58,237,0.35)" } : {}}>
-                {isPosting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} strokeWidth={2.5} />}
-                {isPosting ? "Posting..." : "Post"}
+                onClick={handleUpdate}
+                disabled={!canUpdate || isUpdating}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-sm font-semibold transition ${canUpdate && !isUpdating ? "text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
+                style={canUpdate && !isUpdating ? { background: "linear-gradient(135deg,#7C3AED,#EC4899)", boxShadow: "0 4px 14px rgba(124,58,237,0.35)" } : {}}>
+                {isUpdating ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} strokeWidth={2.5} />}
+                {isUpdating ? "Updating..." : "Update"}
               </motion.button>
             </div>
 
@@ -220,65 +198,56 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
                 />
               </div>
 
-              {/* Media Previews */}
-              {mediaPreviews.length > 0 && (
+              {/* Media Preview (Read-only) */}
+              {post?.media && post.media.length > 0 && (
                 <div className="px-5 pb-4">
                   <div
                     className={`grid gap-2 ${
-                      mediaPreviews.length === 1
+                      post.media.length === 1
                         ? "grid-cols-1"
-                        : mediaPreviews.length === 2
+                        : post.media.length === 2
                         ? "grid-cols-2"
                         : "grid-cols-2"
                     }`}
                   >
-                    {mediaPreviews.map((preview, idx) => (
+                    {post.media.map((media, idx) => (
                       <motion.div
                         key={idx}
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="relative group rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800"
-                        style={{ aspectRatio: mediaPreviews.length === 1 ? "16/9" : "1" }}
+                        style={{ aspectRatio: post.media.length === 1 ? "16/9" : "1" }}
                       >
-                        {preview.type === "image" ? (
+                        {media.type === "image" ? (
                           <img
-                            src={preview.url}
-                            alt="preview"
+                            src={media.url}
+                            alt="media"
                             className="w-full h-full object-cover"
                           />
                         ) : (
                           <video
-                            src={preview.url}
+                            src={media.url}
                             className="w-full h-full object-cover"
                           />
                         )}
-                        <button
-                          onClick={() => handleRemoveMedia(idx)}
-                          className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <div className="bg-black/60 text-white px-2 py-1 rounded text-xs font-medium">
+                            Media cannot be changed
+                          </div>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
-                  {mediaPreviews.length < 10 && (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full mt-2 py-2 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-500 hover:border-blue-400 hover:text-blue-500 transition"
-                    >
-                      + Add more ({mediaPreviews.length}/10)
-                    </button>
-                  )}
                 </div>
               )}
 
               {/* Location — selected pill */}
-              {location && (
+              {locationDisplay && (
                 <div className="px-5 pb-3">
                   <div className="inline-flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 px-3 py-1.5 rounded-full text-sm">
                     <MapPin size={14} />
-                    <span className="font-medium">{location}</span>
-                    <button onClick={() => { setLocation(""); setLocationData(null); }} className="ml-1 hover:text-orange-800 transition">
+                    <span className="font-medium">{locationDisplay}</span>
+                    <button onClick={() => setLocationData(null)} className="ml-1 hover:text-orange-800 transition">
                       <X size={13} />
                     </button>
                   </div>
@@ -286,7 +255,7 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
               )}
 
               {/* Location — search dropdown */}
-              {showLocationInput && !location && (
+              {showLocationInput && !locationDisplay && (
                 <div className="px-5 pb-4 relative">
                   <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl">
                     <MapPin size={15} className="text-orange-500 flex-shrink-0" />
@@ -391,26 +360,6 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
 
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">Add:</p>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                onChange={handleMediaSelect}
-                className="hidden"
-              />
-
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => fileInputRef.current?.click()}
-                disabled={mediaFiles.length >= 10}
-                className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition text-blue-500 disabled:opacity-40"
-                title="Add Photo/Video"
-              >
-                <Image size={18} strokeWidth={1.8} />
-              </motion.button>
-
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
@@ -443,4 +392,4 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
   );
 };
 
-export default CreatePostModal;
+export default EditPostModal;

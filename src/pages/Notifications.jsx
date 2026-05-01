@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
-import { useNotifications, useMarkAsRead } from "../hooks/useApi";
+import { useNotifications, useMarkAsRead, useMarkAllAsRead, useDeleteNotification, useClearAllNotifications } from "../hooks/useApi";
 import { formatTimeAgo } from "../utils/formatters";
 import { Link } from "react-router-dom";
 import MainLayout from "../components/layouts/MainLayout";
@@ -20,7 +20,20 @@ import {
   Check,
   CheckCheck,
   Loader2,
+  Trash2,
+  Trash,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../components/ui/alert-dialog";
 
 const notifIconMap = {
   like: { icon: Heart, color: "text-red-500", bg: "bg-red-50 dark:bg-red-900/20" },
@@ -36,11 +49,23 @@ const Notifications = () => {
   const [status, setStatus] = useState("unread");
   const { data: notificationsData, isLoading, refetch } = useNotifications(1, 20, status);
   const { mutate: markAsRead } = useMarkAsRead();
+  const { mutate: markAllAsRead } = useMarkAllAsRead();
+  const { mutate: deleteNotification } = useDeleteNotification();
+  const { mutate: clearAllNotifications } = useClearAllNotifications();
 
   const notifications = notificationsData?.data?.notifications || [];
 
   const handleMarkAsRead = (notificationId) => {
     markAsRead(notificationId);
+  };
+
+  const handleMArkAllAsRead = () => {
+    markAllAsRead();
+  };
+
+  const handleDeleteNotification = (e, notificationId) => {
+    e.stopPropagation();
+    deleteNotification(notificationId);
   };
 
   const tabs = [
@@ -66,11 +91,42 @@ const Notifications = () => {
             {status === "unread" && notifications.length > 0 && (
               <motion.button
                 whileTap={{ scale: 0.95 }}
+                onClick={handleMArkAllAsRead}
                 className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 px-3 py-1.5 rounded-lg transition"
               >
                 <CheckCheck size={13} />
                 Mark all read
               </motion.button>
+            )}
+            {status === "all" && notifications.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition"
+                  >
+                    <Trash size={13} />
+                    Clear all
+                  </motion.button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-slate-900 dark:text-white">Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-slate-500 dark:text-slate-400">
+                      This action cannot be undone. This will permanently delete all your notifications from the server.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 border-none">Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => clearAllNotifications()} 
+                      className="bg-red-500 hover:bg-red-600 text-white"
+                    >
+                      Clear All
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
 
@@ -175,6 +231,15 @@ const Notifications = () => {
 
                         {/* Unread indicator */}
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          {status === "all" && (
+                            <button
+                              onClick={(e) => handleDeleteNotification(e, notif._id)}
+                              className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                              title="Delete notification"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                           {notif.status === "unread" && (
                             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style={{ background: "linear-gradient(135deg, #EC4899, #F97316)" }} />
                           )}

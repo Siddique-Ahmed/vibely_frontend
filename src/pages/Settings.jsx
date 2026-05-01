@@ -17,19 +17,19 @@ import ChangePassword from "../components/ChangePassword";
 
 /* ── Reusable setting row ── */
 const SettingRow = ({ icon: Icon, label, description, children, danger }) => (
-  <div className={`flex items-center justify-between py-4 border-b border-slate-100 dark:border-slate-800 last:border-0 ${danger ? "text-red-500" : ""}`}>
-    <div className="flex items-center gap-3 flex-1 min-w-0">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+  <div className={`flex items-center justify-between py-4 border-b border-slate-100 dark:border-slate-800 last:border-0 gap-3 sm:gap-4 ${danger ? "text-red-500" : ""}`}>
+    <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+      <div className={`w-9 h-9 mt-0.5 sm:mt-0 rounded-xl flex items-center justify-center flex-shrink-0 ${
         danger ? "bg-red-50 dark:bg-red-900/20" : "bg-slate-100 dark:bg-slate-800"
       }`}>
         <Icon size={18} className={danger ? "text-red-500" : "text-slate-500 dark:text-slate-400"} />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className={`text-sm font-medium ${danger ? "text-red-500" : "text-slate-900 dark:text-white"}`}>{label}</p>
-        {description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{description}</p>}
+        {description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{description}</p>}
       </div>
     </div>
-    <div className="ml-4 flex-shrink-0">{children}</div>
+    <div className="flex-shrink-0">{children}</div>
   </div>
 );
 
@@ -57,9 +57,11 @@ const Settings = () => {
   const { isDarkMode } = useSelector((s) => s.ui);
 
   const [privacy, setPrivacy] = useState({
-    is_private:       user?.is_private       ?? false,
-    allow_follow:     user?.allow_follow     ?? true,
-    message_privacy:  user?.message_privacy  ?? "everyone",
+    is_private:               user?.is_private               ?? false,
+    allow_follow:             user?.allow_follow             ?? true,
+    message_privacy:          user?.message_privacy          ?? "everyone",
+    who_can_see_followers:    user?.who_can_see_followers    ?? "everyone",
+    who_can_see_following:    user?.who_can_see_following    ?? "everyone",
   });
   const [savingPrivacy,  setSavingPrivacy]  = useState(false);
   const [savedPrivacy,   setSavedPrivacy]   = useState(false);
@@ -117,9 +119,11 @@ const Settings = () => {
     setPrivacyError("");
     try {
       const res = await apiClient.post("/users/update-privacy-settings", {
-        is_private:      privacy.is_private,
-        allow_follow:    privacy.allow_follow,
-        message_privacy: privacy.message_privacy,
+        is_private:               privacy.is_private,
+        allow_follow:             privacy.allow_follow,
+        message_privacy:          privacy.message_privacy,
+        who_can_see_followers:    privacy.who_can_see_followers,
+        who_can_see_following:    privacy.who_can_see_following,
       });
       // Update Redux so other parts of the app see the new settings immediately
       const updatedSettings = res.data?.data || {};
@@ -128,6 +132,8 @@ const Settings = () => {
         is_private:      updatedSettings.is_private      ?? privacy.is_private,
         allow_follow:    updatedSettings.allow_follow    ?? privacy.allow_follow,
         message_privacy: updatedSettings.message_privacy ?? privacy.message_privacy,
+        who_can_see_followers: updatedSettings.who_can_see_followers ?? privacy.who_can_see_followers,
+        who_can_see_following: updatedSettings.who_can_see_following ?? privacy.who_can_see_following,
       }));
       setSavedPrivacy(true);
       setTimeout(() => setSavedPrivacy(false), 2500);
@@ -251,9 +257,33 @@ const Settings = () => {
                   description="Control who can send you direct messages">
                   <select value={privacy.message_privacy}
                     onChange={(e) => setPrivacy((p) => ({ ...p, message_privacy: e.target.value }))}
-                    className="text-sm bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border-0 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer">
+                    className="text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border-0 rounded-lg px-2 sm:px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer max-w-[110px] sm:max-w-none">
                     <option value="everyone">Everyone</option>
-                    <option value="followers">Followers Only</option>
+                    <option value="followers">Followers</option>
+                    <option value="no_one">No One</option>
+                  </select>
+                </SettingRow>
+                
+                {/* Who can see Followers */}
+                <SettingRow icon={Users} label="Who Can See Your Followers"
+                  description="Control who can view the list of users that follow you">
+                  <select value={privacy.who_can_see_followers}
+                    onChange={(e) => setPrivacy((p) => ({ ...p, who_can_see_followers: e.target.value }))}
+                    className="text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border-0 rounded-lg px-2 sm:px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer max-w-[140px] sm:max-w-none">
+                    <option value="everyone">Everyone</option>
+                    <option value="followers">Followers</option>
+                    <option value="no_one">No One</option>
+                  </select>
+                </SettingRow>
+
+                {/* Who can see Following */}
+                <SettingRow icon={Users} label="Who Can See Your Following"
+                  description="Control who can view the list of users you follow">
+                  <select value={privacy.who_can_see_following}
+                    onChange={(e) => setPrivacy((p) => ({ ...p, who_can_see_following: e.target.value }))}
+                    className="text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border-0 rounded-lg px-2 sm:px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer max-w-[140px] sm:max-w-none">
+                    <option value="everyone">Everyone</option>
+                    <option value="followers">Followers</option>
                     <option value="no_one">No One</option>
                   </select>
                 </SettingRow>
