@@ -9,6 +9,7 @@ import {
 import DeleteConfirmModal from "../components/posts/DeleteConfirmModal";
 import EditPostModal from "../components/EditPostModal";
 import { formatTimeAgo } from "../utils/formatters";
+import { processMentions } from "../utils/textProcessors";
 import MainLayout from "../components/layouts/MainLayout";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
@@ -17,6 +18,7 @@ import {
   Heart, MessageCircle, Bookmark, Send, Loader2, Share2, Check,
   MessageSquareOff, MoreHorizontal, ArrowLeft,
 } from "lucide-react";
+import MentionSuggestions from "../components/MentionSuggestions";
 import { useRef, useEffect } from "react";
 
 const reactions = [
@@ -44,6 +46,9 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
   const [showReplies, setShowReplies] = useState(false);
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [isCommentLikingPending, setIsCommentLikingPending] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [cursorPos,    setCursorPos]    = useState(0);
 
   const reactionTimeoutRef = useRef(null);
   const longPressTimerRef = useRef(null);
@@ -150,6 +155,33 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
     setShowReactions(false);
   };
 
+  const handleReplyChange = (e) => {
+    const value = e.target.value;
+    const position = e.target.selectionStart;
+    setReplyText(value);
+    setCursorPos(position);
+
+    const textBeforeCursor = value.substring(0, position);
+    const lastAtIdx = textBeforeCursor.lastIndexOf("@");
+    if (lastAtIdx !== -1) {
+      const query = textBeforeCursor.substring(lastAtIdx + 1);
+      if (!query.includes(" ")) {
+        setMentionQuery(query);
+        setShowMentions(true);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  const handleMentionSelect = (username) => {
+    const textBeforeAt = replyText.substring(0, replyText.lastIndexOf("@", cursorPos - 1));
+    const textAfterCursor = replyText.substring(cursorPos);
+    const newText = `${textBeforeAt}@${username} ${textAfterCursor}`;
+    setReplyText(newText);
+    setShowMentions(false);
+  };
+
   const handleReply = () => {
     if (!replyText.trim()) return;
     setIsSendingReply(true);
@@ -176,7 +208,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
               {comment.created_by?.username}
             </p>
             <p className={`${isReply ? "text-xs" : "text-sm"} text-slate-700 dark:text-slate-300`}>
-              {comment.content}
+              {processMentions(comment.content, currentUser?.blocked_usernames)}
             </p>
           </div>
 
@@ -268,31 +300,42 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
                 alt="You"
                 className="w-6 h-6 rounded-full object-cover flex-shrink-0"
               />
-              <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder={`Reply to ${comment.created_by?.username}...`}
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleReply()}
-                  className="bg-transparent flex-1 outline-none text-sm text-slate-900 dark:text-white placeholder-slate-500"
-                  autoFocus
-                />
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={handleReply}
-                  disabled={!replyText.trim() || isSendingReply}
-                  className={`flex-shrink-0 p-1 rounded-full transition ${replyText.trim()
-                      ? "hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400"
-                      : "text-slate-400 cursor-not-allowed"
-                    }`}
-                >
-                  {isSendingReply ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Send size={16} />
+              <div className="flex-1 relative">
+                <div className="bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder={`Reply to ${comment.created_by?.username}...`}
+                    value={replyText}
+                    onChange={handleReplyChange}
+                    onKeyUp={(e) => setCursorPos(e.target.selectionStart)}
+                    onBlur={() => setTimeout(() => setShowMentions(false), 200)}
+                    onKeyDown={(e) => e.key === "Enter" && handleReply()}
+                    className="bg-transparent flex-1 outline-none text-sm text-slate-900 dark:text-white placeholder-slate-500"
+                    autoFocus
+                  />
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleReply}
+                    disabled={!replyText.trim() || isSendingReply}
+                    className={`flex-shrink-0 p-1 rounded-full transition ${replyText.trim()
+                        ? "hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+                        : "text-slate-400 cursor-not-allowed"
+                      }`}
+                  >
+                    {isSendingReply ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Send size={16} />
+                    )}
+                  </motion.button>
+                </div>
+                <AnimatePresence>
+                  {showMentions && (
+                    <div className="absolute bottom-full left-0 mb-2 w-full max-w-[280px]">
+                      <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} />
+                    </div>
                   )}
-                </motion.button>
+                </AnimatePresence>
               </div>
             </div>
           )}
@@ -377,6 +420,9 @@ const PostDetail = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   const [isLikingPending, setIsLikingPending] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [cursorPos,    setCursorPos]    = useState(0);
   const reactionTimeoutRef = useRef(null);
   const longPressTimerRef = useRef(null);
 
@@ -409,6 +455,33 @@ const PostDetail = () => {
   }, [post?._id, post?.isLiked, post?.reaction_type, post?.likes_count, post?.isBookmarked]);
 
   const comments = commentsData?.data?.comments ?? commentsData?.comments ?? [];
+
+  const handleCommentChange = (e) => {
+    const value = e.target.value;
+    const position = e.target.selectionStart;
+    setCommentText(value);
+    setCursorPos(position);
+
+    const textBeforeCursor = value.substring(0, position);
+    const lastAtIdx = textBeforeCursor.lastIndexOf("@");
+    if (lastAtIdx !== -1) {
+      const query = textBeforeCursor.substring(lastAtIdx + 1);
+      if (!query.includes(" ")) {
+        setMentionQuery(query);
+        setShowMentions(true);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  const handleMentionSelect = (username) => {
+    const textBeforeAt = commentText.substring(0, commentText.lastIndexOf("@", cursorPos - 1));
+    const textAfterCursor = commentText.substring(cursorPos);
+    const newText = `${textBeforeAt}@${username} ${textAfterCursor}`;
+    setCommentText(newText);
+    setShowMentions(false);
+  };
 
   const handleAddComment = () => {
     if (!commentText.trim() || sending) return;
@@ -601,7 +674,7 @@ const PostDetail = () => {
                   className="w-full h-full min-h-64 flex items-center justify-center p-8"
                   style={{ background: "linear-gradient(135deg,#7C3AED,#EC4899,#F97316)" }}
                 >
-                  <p className="text-white text-xl font-medium text-center">{post.caption}</p>
+                  <p className="text-white text-xl font-medium text-center">{processMentions(post.caption, currentUser?.blocked_usernames)}</p>
                 </div>
               )}
             </div>
@@ -675,7 +748,7 @@ const PostDetail = () => {
               {post.caption && (
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                   <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                    {post.caption}
+                    {processMentions(post.caption, currentUser?.blocked_usernames)}
                   </p>
                 </div>
               )}
@@ -825,29 +898,40 @@ const PostDetail = () => {
                     alt="You"
                     className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                   />
-                  <div className="flex-1 flex items-center bg-slate-100 dark:bg-slate-800 rounded-full pr-1">
-                    <input
-                      type="text"
-                      placeholder="Add a comment…"
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
-                      className="flex-1 bg-transparent px-4 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
-                    />
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleAddComment}
-                      disabled={!commentText.trim() || sending}
-                      className="w-8 h-8 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition"
-                      style={{ background: "linear-gradient(135deg,#7C3AED,#EC4899)" }}
-                    >
-                      {sending ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Send size={14} />
+                  <div className="flex-1 relative">
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full pr-1">
+                      <input
+                        type="text"
+                        placeholder="Add a comment…"
+                        value={commentText}
+                        onChange={handleCommentChange}
+                        onKeyUp={(e) => setCursorPos(e.target.selectionStart)}
+                        onBlur={() => setTimeout(() => setShowMentions(false), 200)}
+                        onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+                        className="flex-1 bg-transparent px-4 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+                      />
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleAddComment}
+                        disabled={!commentText.trim() || sending}
+                        className="w-8 h-8 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition"
+                        style={{ background: "linear-gradient(135deg,#7C3AED,#EC4899)" }}
+                      >
+                        {sending ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Send size={14} />
+                        )}
+                      </motion.button>
+                    </div>
+                    <AnimatePresence>
+                      {showMentions && (
+                        <div className="absolute bottom-full left-0 mb-2 w-full max-w-[280px]">
+                          <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} />
+                        </div>
                       )}
-                    </motion.button>
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>

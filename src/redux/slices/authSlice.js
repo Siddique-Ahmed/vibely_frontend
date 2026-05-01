@@ -74,6 +74,19 @@ const authSlice = createSlice({
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     },
+    toggleBlockUser: (state, action) => {
+      if (!state.user) return;
+      const username = action.payload; // expectation: username of the blocked/unblocked user
+      const list = state.user.blocked_usernames || [];
+      const index = list.indexOf(username);
+      if (index === -1) {
+        list.push(username);
+      } else {
+        list.splice(index, 1);
+      }
+      state.user.blocked_usernames = list;
+      localStorage.setItem("user", JSON.stringify(state.user));
+    },
   },
 });
 
@@ -84,6 +97,7 @@ export const {
   setLoading,
   setError,
   logout,
+  toggleBlockUser,
 } = authSlice.actions;
 
 export default authSlice.reducer;

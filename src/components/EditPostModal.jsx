@@ -16,6 +16,7 @@ import {
   Lock,
   Edit3,
 } from "lucide-react";
+import MentionSuggestions from "./MentionSuggestions";
 
 const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
   const { user } = useSelector((state) => state.auth);
@@ -30,6 +31,9 @@ const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
   const [step, setStep] = useState("compose");
   const locationTimer = useRef(null);
   const { mutate: updatePost } = useUpdatePost();
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [cursorPos,    setCursorPos]    = useState(0);
 
   const visibilityOptions = [
     { value: "public", label: "Public", icon: Globe, description: "Anyone can see" },
@@ -78,6 +82,33 @@ const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
     setLocationQuery("");
     setLocationSuggestions([]);
     setShowLocationInput(false);
+  };
+
+  const handleCaptionChange = (e) => {
+    const value = e.target.value;
+    const position = e.target.selectionStart;
+    setCaption(value);
+    setCursorPos(position);
+
+    const textBeforeCursor = value.substring(0, position);
+    const lastAtIdx = textBeforeCursor.lastIndexOf("@");
+    if (lastAtIdx !== -1) {
+      const query = textBeforeCursor.substring(lastAtIdx + 1);
+      if (!query.includes(" ")) {
+        setMentionQuery(query);
+        setShowMentions(true);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  const handleMentionSelect = (username) => {
+    const textBeforeAt = caption.substring(0, caption.lastIndexOf("@", cursorPos - 1));
+    const textAfterCursor = caption.substring(cursorPos);
+    const newCaption = `${textBeforeAt}@${username} ${textAfterCursor}`;
+    setCaption(newCaption);
+    setShowMentions(false);
   };
 
   const handleUpdate = async () => {
@@ -192,10 +223,19 @@ const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
                 <textarea
                   placeholder="What's on your mind?"
                   value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
+                  onChange={handleCaptionChange}
+                  onKeyUp={(e) => setCursorPos(e.target.selectionStart)}
+                  onBlur={() => setTimeout(() => setShowMentions(false), 200)}
                   rows={4}
                   className="w-full text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 bg-transparent focus:outline-none resize-none leading-relaxed"
                 />
+                <AnimatePresence>
+                  {showMentions && (
+                    <div className="relative">
+                      <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} />
+                    </div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Media Preview (Read-only) */}

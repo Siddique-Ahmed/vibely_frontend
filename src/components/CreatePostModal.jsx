@@ -15,6 +15,7 @@ import {
   UserCheck,
   Lock,
 } from "lucide-react";
+import MentionSuggestions from "./MentionSuggestions";
 
 const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
   const { user } = useSelector((state) => state.auth);
@@ -30,6 +31,9 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
   const [isPosting,     setIsPosting]     = useState(false);
   const [step,          setStep]          = useState("compose");
   const [visibility,   setVisibility]    = useState("public");
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [cursorPos,    setCursorPos]    = useState(0);
   const fileInputRef   = useRef(null);
   const locationTimer  = useRef(null);
   const { mutate: createPost } = useCreatePost();
@@ -99,6 +103,36 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleCaptionChange = (e) => {
+    const value = e.target.value;
+    const position = e.target.selectionStart;
+    setCaption(value);
+    setCursorPos(position);
+
+    // Mention detection logic
+    const textBeforeCursor = value.substring(0, position);
+    const lastAtIdx = textBeforeCursor.lastIndexOf("@");
+
+    if (lastAtIdx !== -1) {
+      const query = textBeforeCursor.substring(lastAtIdx + 1);
+      // Ensure no space between @ and cursor
+      if (!query.includes(" ")) {
+        setMentionQuery(query);
+        setShowMentions(true);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  const handleMentionSelect = (username) => {
+    const textBeforeAt = caption.substring(0, caption.lastIndexOf("@", cursorPos - 1));
+    const textAfterCursor = caption.substring(cursorPos);
+    const newCaption = `${textBeforeAt}@${username} ${textAfterCursor}`;
+    setCaption(newCaption);
+    setShowMentions(false);
   };
 
   const handleRemoveMedia = (index) => {
@@ -210,14 +244,23 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
               </div>
 
               {/* Caption */}
-              <div className="px-5 pb-3">
+              <div className="px-5 pb-3 relative">
                 <textarea
                   placeholder="What's on your mind?"
                   value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
+                  onChange={handleCaptionChange}
+                  onKeyUp={(e) => setCursorPos(e.target.selectionStart)}
+                  onBlur={() => setTimeout(() => setShowMentions(false), 200)}
                   rows={4}
                   className="w-full text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 bg-transparent focus:outline-none resize-none leading-relaxed"
                 />
+                <AnimatePresence>
+                  {showMentions && (
+                    <div className="absolute top-full left-5 right-5 z-50">
+                      <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} placement="top-full" />
+                    </div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Media Previews */}

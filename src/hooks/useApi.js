@@ -140,6 +140,18 @@ export const useSearchUsers = (query, limit = 20) => {
   });
 };
 
+/** GET /api/v1/users/search-user-for-mention?query= */
+export const useSearchUsersForMention = (query) => {
+  return useQuery({
+    queryKey: ["searchUsersForMention", query],
+    queryFn: () =>
+      apiClient
+        .get("/users/search-user-for-mention", { params: { query } })
+        .then((res) => res.data),
+    enabled: !!query && query.trim().length > 0,
+  });
+};
+
 /** GET /api/v1/users/posts/:userId — any user's posts for profile page */
 export const useGetUserPosts = (userId, page = 1, limit = 20) => {
   return useQuery({

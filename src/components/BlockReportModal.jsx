@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import apiClient from "../services/apiClient";
+import { useDispatch } from "react-redux";
+import { toggleBlockUser } from "../redux/slices/authSlice";
 import {
   ShieldBan, Flag, X, ChevronRight, Loader2,
   CheckCircle2, AlertTriangle,
@@ -25,12 +27,17 @@ const BlockReportModal = ({ targetUser, onClose, onBlockSuccess }) => {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
+  const dispatch = useDispatch();
   const handleBlock = async () => {
     setLoading(true);
     setError("");
     try {
       const res = await apiClient.post(`/blocks/toggle/${targetUser._id}`);
       const isBlocked = res.data?.data?.isBlocked ?? true;
+      
+      // Update local Redux state for mentions handling
+      dispatch(toggleBlockUser(targetUser.username));
+      
       setMessage(isBlocked ? "User blocked successfully." : "User unblocked.");
       setScreen("done");
       onBlockSuccess?.(isBlocked);

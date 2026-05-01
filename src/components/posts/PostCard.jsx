@@ -21,6 +21,7 @@ import {
   Check,
 } from "lucide-react";
 import { formatTimeAgo } from "../../utils/formatters";
+import { processMentions } from "../../utils/textProcessors";
 import LikesModal from "./LikesModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import EditPostModal from "../EditPostModal";
@@ -122,6 +123,24 @@ const PostCard = ({ post, onLike, onShare }) => {
   const likeCountTimeoutRef = useRef(null);
   const longPressTimerRef = useRef(null);
   const isLongPressRef = useRef(false);
+  const optionsRef = useRef(null);
+
+  // Close options menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (optionsRef.current && !optionsRef.current.contains(event.target)) {
+        setShowOptions(false);
+      }
+    };
+    if (showOptions) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showOptions]);
 
   // Optimistic bookmark state
   const [isBookmarked, setIsBookmarked] = useState(
@@ -317,10 +336,10 @@ const PostCard = ({ post, onLike, onShare }) => {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden mb-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-sm hover:shadow-md"
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 mb-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-sm hover:shadow-md"
       >
         {/* Post Header */}
-        <div className="p-4 flex items-center justify-between">
+        <div className="p-4 flex items-center justify-between rounded-t-2xl">
           <Link
             to={`/profile/${post.created_by?._id}`}
             className="flex items-center gap-3 group"
@@ -367,7 +386,7 @@ const PostCard = ({ post, onLike, onShare }) => {
             </div>
           </Link>
 
-          <div className="relative">
+          <div className="relative" ref={optionsRef}>
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
@@ -421,7 +440,7 @@ const PostCard = ({ post, onLike, onShare }) => {
         {post.caption && (
           <div className="px-4 pb-3">
             <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
-              {post.caption}
+              {processMentions(post.caption, user?.blocked_usernames)}
             </p>
           </div>
         )}
@@ -601,7 +620,7 @@ const PostCard = ({ post, onLike, onShare }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="px-2 py-1 flex items-center gap-1 border-t border-slate-100 dark:border-slate-800">
+        <div className="px-2 py-1 flex items-center gap-1 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl">
           {/* Like Button with Reaction Picker */}
           <div
             className="flex-1 relative"
