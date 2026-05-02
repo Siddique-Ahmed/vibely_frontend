@@ -35,7 +35,9 @@ const Topbar = ({ onCreatePost }) => {
   const searchRef = useRef(null);
   const userMenuRef = useRef(null);
 
-  const unreadCount = unreadData?.data?.unreadCount || 0;
+  // Use Redux unreadCount for instant updates instead of polling
+  const { unreadCount: instantUnreadCount } = useSelector((state) => state.ui);
+  const unreadCount = instantUnreadCount || unreadData?.data?.unreadCount || 0;
 
   useEffect(() => {
     const handleClickOutside = (e) => {

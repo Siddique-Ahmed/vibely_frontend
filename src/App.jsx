@@ -10,6 +10,7 @@ import { Provider, useSelector } from "react-redux";
 import store from "./redux/store";
 import queryClient from "./services/queryClient";
 import ProtectedRoute from "./pages/ProtectedRoute";
+import { ToastContainer } from "./components/Toast";
 
 // Auth Pages
 import Login          from "./pages/Login";
@@ -53,7 +54,8 @@ const App = () => {
   }, [isDarkMode]);
 
   return (
-    <Routes>
+    <>
+      <Routes>
       {/* ── Public (no auth required) ── */}
       <Route
         path="/login"
@@ -116,7 +118,11 @@ const App = () => {
         element={<Navigate to={isAuthenticated ? "/feed" : "/login"} replace />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+
+      {/* Toast Container for notifications */}
+      <ToastContainer />
+    </>
   );
 };
 

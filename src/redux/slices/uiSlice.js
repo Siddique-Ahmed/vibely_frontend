@@ -15,10 +15,20 @@ const uiSlice = createSlice({
   initialState,
   reducers: {
     setNotifications: (state, action) => {
-      state.notifications = action.payload;
+      // If payload is an array of new notifications, prepend them
+      if (Array.isArray(action.payload)) {
+        state.notifications = [...action.payload, ...state.notifications];
+      } else {
+        // If it's a single update, replace
+        state.notifications = action.payload;
+      }
     },
     setUnreadCount: (state, action) => {
-      state.unreadCount = action.payload;
+      if (typeof action.payload === 'function') {
+        state.unreadCount = action.payload(state.unreadCount);
+      } else {
+        state.unreadCount = action.payload;
+      }
     },
     toggleNotificationPanel: (state) => {
       state.showNotificationPanel = !state.showNotificationPanel;

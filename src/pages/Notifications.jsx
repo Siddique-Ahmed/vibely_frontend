@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useNotifications, useMarkAsRead, useMarkAllAsRead, useDeleteNotification, useClearAllNotifications } from "../hooks/useApi";
+import { setNotifications } from "../redux/slices/uiSlice";
+import { useSocket } from "../context/SocketContext";
 import { formatTimeAgo } from "../utils/formatters";
 import { Link } from "react-router-dom";
 import MainLayout from "../components/layouts/MainLayout";
@@ -47,19 +49,37 @@ const notifIconMap = {
 
 const Notifications = () => {
   const [status, setStatus] = useState("unread");
-  const { data: notificationsData, isLoading, refetch } = useNotifications(1, 20, status);
+  const { data: notificationsData, isLoading } = useNotifications(1, 20, status);
   const { mutate: markAsRead } = useMarkAsRead();
   const { mutate: markAllAsRead } = useMarkAllAsRead();
   const { mutate: deleteNotification } = useDeleteNotification();
   const { mutate: clearAllNotifications } = useClearAllNotifications();
+  const { socket } = useSocket();
+  const dispatch = useDispatch();
 
-  const notifications = notificationsData?.data?.notifications || [];
+  // Get notifications from API
+  const apiNotifications = notificationsData?.data?.notifications || [];
+
+  // Listen for real-time notifications from Socket.IO
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = (newNotification) => {
+      console.log("📱 Real-time notification received, will refetch from API");
+    };
+
+    socket.on("notification received", handleNewNotification);
+
+    return () => {
+      socket.off("notification received", handleNewNotification);
+    };
+  }, [socket]);
 
   const handleMarkAsRead = (notificationId) => {
     markAsRead(notificationId);
   };
 
-  const handleMArkAllAsRead = () => {
+  const handleMarkAllAsRead = () => {
     markAllAsRead();
   };
 
@@ -88,17 +108,17 @@ const Notifications = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notifications</h1>
-            {status === "unread" && notifications.length > 0 && (
+            {status === "unread" && apiNotifications.length > 0 && (
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={handleMArkAllAsRead}
+                onClick={handleMarkAllAsRead}
                 className="flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 px-3 py-1.5 rounded-lg transition"
               >
                 <CheckCheck size={13} />
                 Mark all read
               </motion.button>
             )}
-            {status === "all" && notifications.length > 0 && (
+            {status === "all" && apiNotifications.length > 0 && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <motion.button
@@ -155,9 +175,9 @@ const Notifications = () => {
             <Loader2 className="w-7 h-7 animate-spin" style={{ color: "#EC4899" }} />
             <p className="text-sm text-slate-500 dark:text-slate-400">Loading notifications...</p>
           </div>
-        ) : notifications.length > 0 ? (
+        ) : apiNotifications.length > 0 ? (
           <div className="space-y-2">
-            {notifications.map((notif, idx) => {
+            {apiNotifications.map((notif, idx) => {
               const iconConfig = notifIconMap[notif.type] || {
                 icon: Bell,
                 color: "text-slate-500",
@@ -172,12 +192,11 @@ const Notifications = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.04 }}
                   onClick={() => notif.status === "unread" && handleMarkAsRead(notif._id)}
-                  className={`p-4 rounded-2xl border cursor-pointer transition-all group ${
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all group relative ${
                     notif.status === "unread"
                       ? "bg-purple-50/60 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800/50 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                       : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
-                  }`}
-                >
+                  }`}>
                   <div className="flex gap-3">
                     {/* Sender Avatar + Type Icon */}
                     <div className="relative flex-shrink-0">
