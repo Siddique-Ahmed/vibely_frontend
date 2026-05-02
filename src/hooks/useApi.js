@@ -438,29 +438,37 @@ export const useUnreadCount = () => {
 };
 
 /** PUT /api/v1/notifications/read/:notificationId */
-export const useMarkAsRead = () => {
+export const useMarkAsRead = (options = {}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (notificationId) =>
       apiClient
         .put(`/notifications/read/${notificationId}`)
         .then((res) => res.data),
-    onSuccess: () => {
+    ...options,
+    onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      if (typeof options.onSuccess === "function") {
+        options.onSuccess(data, variables, context);
+      }
     },
   });
 };
 
 /** PUT /api/v1/notifications/readAll */
-export const useMarkAllAsRead = () => {
+export const useMarkAllAsRead = (options = {}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () =>
       apiClient.put("/notifications/readAll").then((res) => res.data),
-    onSuccess: () => {
+    ...options,
+    onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      if (typeof options.onSuccess === "function") {
+        options.onSuccess(data, variables, context);
+      }
     },
   });
 };

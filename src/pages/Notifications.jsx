@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useNotifications, useMarkAsRead, useMarkAllAsRead, useDeleteNotification, useClearAllNotifications } from "../hooks/useApi";
-import { setNotifications } from "../redux/slices/uiSlice";
+import { setUnreadCount } from "../redux/slices/uiSlice";
 import { useSocket } from "../context/SocketContext";
 import { formatTimeAgo } from "../utils/formatters";
 import { Link } from "react-router-dom";
@@ -50,12 +50,20 @@ const notifIconMap = {
 const Notifications = () => {
   const [status, setStatus] = useState("unread");
   const { data: notificationsData, isLoading } = useNotifications(1, 20, status);
-  const { mutate: markAsRead } = useMarkAsRead();
-  const { mutate: markAllAsRead } = useMarkAllAsRead();
+  const dispatch = useDispatch();
+  const { mutate: markAsRead } = useMarkAsRead({
+    onSuccess: () => {
+      dispatch(setUnreadCount((prevCount) => Math.max(prevCount - 1, 0)));
+    },
+  });
+  const { mutate: markAllAsRead } = useMarkAllAsRead({
+    onSuccess: () => {
+      dispatch(setUnreadCount(0));
+    },
+  });
   const { mutate: deleteNotification } = useDeleteNotification();
   const { mutate: clearAllNotifications } = useClearAllNotifications();
   const { socket } = useSocket();
-  const dispatch = useDispatch();
 
   // Get notifications from API
   const apiNotifications = notificationsData?.data?.notifications || [];
@@ -65,7 +73,7 @@ const Notifications = () => {
     if (!socket) return;
 
     const handleNewNotification = (newNotification) => {
-      console.log("📱 Real-time notification received, will refetch from API");
+      console.log("📱 Real-time notification received, will refetch from API", newNotification);
     };
 
     socket.on("notification received", handleNewNotification);

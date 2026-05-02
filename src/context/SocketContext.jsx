@@ -15,7 +15,6 @@ export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [onlineUsers, setOnlineUsers] = useState([]);
     const { user } = useSelector((state) => state.auth);
-    const { unreadCount } = useSelector((state) => state.ui);
     const dispatch = useDispatch();
     const queryClient = useQueryClient();
 
@@ -90,8 +89,8 @@ export const SocketProvider = ({ children }) => {
                 // Update Redux state with new notification
                 dispatch(setNotifications([newNotification]));
                 
-                // Increment unread count in Redux with numeric value (not function)
-                dispatch(setUnreadCount(unreadCount + 1));
+                // Increment unread count in Redux using a functional update
+                dispatch(setUnreadCount((prevCount) => prevCount + 1));
 
                 // Invalidate queries to refetch data
                 queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });

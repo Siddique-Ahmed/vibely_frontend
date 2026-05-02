@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useUnreadCount } from "../hooks/useApi";
-import { toggleDarkMode } from "../redux/slices/uiSlice";
+import { setUnreadCount, toggleDarkMode } from "../redux/slices/uiSlice";
 import { logout } from "../redux/slices/authSlice";
 import apiClient from "../services/apiClient";
 import {
@@ -35,9 +35,15 @@ const Topbar = ({ onCreatePost }) => {
   const searchRef = useRef(null);
   const userMenuRef = useRef(null);
 
-  // Use Redux unreadCount for instant updates instead of polling
+  // Use Redux unreadCount for instant updates and keep it in sync with query data
   const { unreadCount: instantUnreadCount } = useSelector((state) => state.ui);
-  const unreadCount = instantUnreadCount || unreadData?.data?.unreadCount || 0;
+  const unreadCount = instantUnreadCount;
+
+  useEffect(() => {
+    if (unreadData?.data?.unreadCount != null) {
+      dispatch(setUnreadCount(unreadData.data.unreadCount));
+    }
+  }, [unreadData?.data?.unreadCount, dispatch]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
