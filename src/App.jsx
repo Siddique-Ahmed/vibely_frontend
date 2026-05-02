@@ -28,12 +28,16 @@ import Settings      from "./pages/Settings";
 import Bookmarks     from "./pages/Bookmarks";
 import Messages      from "./pages/Messages";
 
+import { SocketProvider } from "./context/SocketContext";
+
 const AppWrapper = () => (
   <Provider store={store}>
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <App />
-      </Router>
+      <SocketProvider>
+        <Router>
+          <App />
+        </Router>
+      </SocketProvider>
     </QueryClientProvider>
   </Provider>
 );
