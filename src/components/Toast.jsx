@@ -1,161 +1,222 @@
-import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useEffect } from 'react';
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Toast,
+  ToastClose,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
+} from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 
-/**
- * Professional Toast Notification Component
- * Displays real-time toast notifications with profile pictures for events like:
- * - User came online
- * - New notification received (like, comment, follow, etc.)
- */
+// ─── Icon map ────────────────────────────────────────────────────────────────
+const ICONS = {
+  like: "♥",
+  follow: "+",
+  comment: "✦",
+  reply: "↩",
+  mention: "@",
+  online: "●",
+  success: "✓",
+  error: "✕",
+  warning: "!",
+  info: "i",
+};
 
-export const Toast = ({ message, type = 'info', duration = 3000, onClose, sender, notificationType }) => {
+const LABELS = {
+  like: "New like",
+  follow: "New follower",
+  comment: "New comment",
+  reply: "New reply",
+  mention: "Mention",
+  online: "Online",
+  success: "Success",
+  error: "Error",
+  warning: "Warning",
+  info: "Info",
+};
+
+// ─── Variant styles (left accent + icon bg) ──────────────────────────────────
+const VARIANTS = {
+  success: {
+    accent: "before:bg-green-700",
+    iconBg: "bg-green-50 text-green-700",
+  },
+  error: {
+    accent: "before:bg-red-700",
+    iconBg: "bg-red-50 text-red-700",
+  },
+  warning: {
+    accent: "before:bg-amber-600",
+    iconBg: "bg-amber-50 text-amber-700",
+  },
+  info: {
+    accent: "before:bg-blue-700",
+    iconBg: "bg-blue-50 text-blue-700",
+  },
+  like: {
+    accent: "before:bg-pink-700",
+    iconBg: "bg-pink-50 text-pink-700",
+  },
+  follow: {
+    accent: "before:bg-violet-700",
+    iconBg: "bg-violet-50 text-violet-700",
+  },
+  comment: {
+    accent: "before:bg-teal-700",
+    iconBg: "bg-teal-50 text-teal-700",
+  },
+  online: {
+    accent: "before:bg-emerald-700",
+    iconBg: "bg-emerald-50 text-emerald-700",
+  },
+  reply: {
+    accent: "before:bg-indigo-700",
+    iconBg: "bg-indigo-50 text-indigo-700",
+  },
+  mention: {
+    accent: "before:bg-orange-600",
+    iconBg: "bg-orange-50 text-orange-700",
+  },
+};
+
+// ─── Single Toast Item ────────────────────────────────────────────────────────
+const VibelyToast = ({ id, message, type = "info", sender, duration = 4000, onClose }) => {
+  const variant = VARIANTS[type] || VARIANTS.info;
+  const hasSender = sender?.username;
+  const initials = hasSender ? sender.username.charAt(0).toUpperCase() : "?";
+  const icon = ICONS[type] || ICONS.info;
+  const title = hasSender ? sender.username : LABELS[type] || "Notification";
+
   useEffect(() => {
     const timer = setTimeout(onClose, duration);
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
-  const bgColor = {
-    info: 'bg-blue-500',
-    success: 'bg-green-500',
-    warning: 'bg-yellow-500',
-    error: 'bg-red-500',
-    online: 'bg-emerald-500',
-    like: 'bg-pink-500',
-    comment: 'bg-purple-500',
-    follow: 'bg-indigo-500',
-    reply: 'bg-violet-500',
-    mention: 'bg-orange-500',
-  }[type] || 'bg-blue-500';
-
-  const iconMap = {
-    like: '❤️',
-    comment: '💬',
-    follow: '👥',
-    reply: '↩️',
-    mention: '@',
-    online: '🟢',
-    info: 'ℹ️',
-    success: '✅',
-    warning: '⚠️',
-    error: '❌',
-  };
-
-  const icon = iconMap[type] || iconMap.info;
-
-  // For notifications with sender info, show professional layout
-  if (sender && notificationType) {
-    return (
-      <div
-        className={`fixed top-4 right-4 ${bgColor} text-white px-4 py-3 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-300 z-50 max-w-sm border border-white/20 backdrop-blur-sm`}
-      >
-        <div className="flex items-center gap-3">
-          {/* Profile Picture */}
-          <div className="relative">
-            {sender.profile?.profile_picture ? (
-              <img
-                src={sender.profile.profile_picture}
-                alt={sender.username}
-                className="w-10 h-10 rounded-full border-2 border-white/30 object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-            ) : null}
-            {/* Fallback: Initials */}
-            <div
-              className={`w-10 h-10 rounded-full border-2 border-white/30 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm ${
-                sender.profile?.profile_picture ? 'hidden' : ''
-              }`}
-            >
-              {sender.username?.charAt(0).toUpperCase() || '?'}
-            </div>
-            {/* Notification Type Icon Overlay */}
-            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-md">
-              <span className="text-sm">{icon}</span>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">
-              {sender.username}
-            </p>
-            <p className="text-xs opacity-90 truncate">
-              {message}
-            </p>
-          </div>
-
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="text-white/70 hover:text-white transition-colors ml-2"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Default simple toast for non-notification types
   return (
-    <div
-      className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 duration-300 z-50`}
+    <Toast
+      className={cn(
+        "relative overflow-hidden flex items-start gap-3 p-4 pr-10",
+        "bg-white dark:bg-zinc-900",
+        "border border-zinc-200 dark:border-zinc-800",
+        "rounded-xl shadow-lg",
+        // Left accent bar via before pseudo
+        "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:rounded-l-xl",
+        variant.accent
+      )}
     >
-      <p className="font-medium">{message}</p>
-    </div>
+      {/* Avatar (with sender) OR Icon (without sender) */}
+      {hasSender ? (
+        <div className="relative shrink-0">
+          {sender.profile?.profile_picture ? (
+            <img
+              src={sender.profile.profile_picture}
+              alt={sender.username}
+              className="w-9 h-9 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
+              onError={(e) => {
+                e.target.style.display = "none";
+                e.target.nextSibling.style.display = "flex";
+              }}
+            />
+          ) : null}
+          <div
+            className={cn(
+              "w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm",
+              "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-200",
+              sender.profile?.profile_picture ? "hidden" : "flex"
+            )}
+          >
+            {initials}
+          </div>
+          {/* Badge */}
+          <div
+            className={cn(
+              "absolute -bottom-1 -right-1 w-[18px] h-[18px] rounded-full",
+              "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700",
+              "flex items-center justify-center text-[10px]"
+            )}
+          >
+            {icon}
+          </div>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "w-9 h-9 rounded-full flex items-center justify-center text-base shrink-0",
+            variant.iconBg
+          )}
+        >
+          {icon}
+        </div>
+      )}
+
+      {/* Text */}
+      <div className="flex-1 min-w-0">
+        <ToastTitle className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate leading-snug">
+          {title}
+        </ToastTitle>
+        <ToastDescription className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+          {message}
+        </ToastDescription>
+        <p className="text-[11px] text-zinc-400 dark:text-zinc-600 mt-1">just now</p>
+      </div>
+
+      {/* Progress bar */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-[2px] bg-zinc-200 dark:bg-zinc-700 origin-left"
+        style={{
+          animation: `shrink ${duration}ms linear forwards`,
+        }}
+      />
+
+      <ToastClose />
+
+      <style>{`
+        @keyframes shrink {
+          from { transform: scaleX(1); }
+          to   { transform: scaleX(0); }
+        }
+      `}</style>
+    </Toast>
   );
 };
 
+// ─── Toast Container ──────────────────────────────────────────────────────────
 export const ToastContainer = () => {
-  const [toasts, setToasts] = React.useState([]);
+  const [toasts, setToasts] = useState([]);
 
-  // Subscribe to toast events (we'll emit custom events from SocketContext)
   useEffect(() => {
-    const handleToast = (event) => {
-      const newToast = {
-        id: Date.now(),
-        ...event.detail,
-      };
-      setToasts((prev) => [...prev, newToast]);
+    const handler = (e) => {
+      setToasts((prev) => [
+        ...prev.slice(-4), // max 5 at a time
+        { id: Date.now(), ...e.detail },
+      ]);
     };
-
-    window.addEventListener('show-toast', handleToast);
-    return () => window.removeEventListener('show-toast', handleToast);
+    window.addEventListener("show-toast", handler);
+    return () => window.removeEventListener("show-toast", handler);
   }, []);
 
-  const removeToast = (id) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
+  const remove = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
+    <ToastProvider>
       {toasts.map((toast) => (
-        <Toast
+        <VibelyToast
           key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          duration={toast.duration || 3000}
-          sender={toast.sender}
-          notificationType={toast.notificationType}
-          onClose={() => removeToast(toast.id)}
+          {...toast}
+          onClose={() => remove(toast.id)}
         />
       ))}
-    </div>
+      <ToastViewport className="fixed bottom-6 right-6 flex flex-col-reverse gap-2 w-[360px] z-[100]" />
+    </ToastProvider>
   );
 };
 
-/**
- * Utility to show toast notifications from anywhere
- * Usage: showToast({ message: 'Hello', type: 'success', sender: user, notificationType: 'like' })
- */
-export const showToast = (options = {}) => {
-  const { message = '', type = 'info', duration = 3000, sender, notificationType } = options;
+export const showToast = ({ message = "", type = "info", duration = 4000, sender, notificationType } = {}) => {
   window.dispatchEvent(
-    new CustomEvent('show-toast', {
-      detail: { message, type, duration, sender, notificationType },
+    new CustomEvent("show-toast", {
+      detail: { message, type: notificationType || type, duration, sender },
     })
   );
 };
