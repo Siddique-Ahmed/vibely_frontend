@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSelector, useDispatch } from "react-redux";
 import { setUser } from "../redux/slices/authSlice";
-import { useToggleFollow, useUpdateProfile, useUpdatePrivacySettings, useBookmarks } from "../hooks/useApi";
+import { useToggleFollow, useUpdateProfile, useUpdatePrivacySettings, useBookmarks, useCreateChat } from "../hooks/useApi";
 import apiClient from "../services/apiClient";
 import MainLayout from "../components/layouts/MainLayout";
 import Sidebar from "../components/Sidebar";
@@ -283,7 +283,7 @@ const EditProfileModal = ({ profile, onClose, onSaved }) => {
 };
 
 /* ── User List Modal (Followers/Following) ─────────────────── */
-const UserListModal = ({ title, userId, type, onClose }) => {
+const UserListModal = ({ title, userId, type, onClose, onMessageUser }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -309,7 +309,7 @@ const UserListModal = ({ title, userId, type, onClose }) => {
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
         <motion.div
@@ -331,10 +331,8 @@ const UserListModal = ({ title, userId, type, onClose }) => {
             ) : users.length > 0 ? (
               <div className="space-y-1">
                 {users.map((u) => (
-                  <Link
+                  <div
                     key={u._id}
-                    to={`/profile/${u._id}`}
-                    onClick={onClose}
                     className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
                   >
                     <img
@@ -342,13 +340,28 @@ const UserListModal = ({ title, userId, type, onClose }) => {
                       alt={u.username}
                       className="w-10 h-10 rounded-full object-cover"
                     />
-                    <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        to={`/profile/${u._id}`}
+                        onClick={onClose}
+                        className="block text-sm font-bold text-slate-900 dark:text-white leading-tight truncate"
+                      >
                         {u.profile?.full_name || u.username}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">@{u.username}</p>
+                      </Link>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{u.username}</p>
                     </div>
-                  </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onMessageUser) onMessageUser(u._id);
+                        onClose();
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900 transition"
+                    >
+                      <MessageSquare size={14} />
+                      Message
+                    </button>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -422,8 +435,10 @@ const SavedTab = () => {
 /* ── Main Profile Component ─────────────────────────────────── */
 const Profile = () => {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const { user: currentUser } = useSelector((state) => state.auth);
   const { mutate: toggleFollow } = useToggleFollow();
+  const { mutateAsync: createChat } = useCreateChat();
 
   const [profile,         setProfile]         = useState(null);
   const [userPosts,       setUserPosts]        = useState([]);
@@ -487,6 +502,20 @@ const Profile = () => {
         } : p);
       },
     });
+  };
+
+  const openChatWithUser = async (targetUserId) => {
+    if (!targetUserId) return;
+
+    try {
+      const result = await createChat(targetUserId);
+      const chat = result?.data?.chat || result?.chat;
+      if (chat?._id) {
+        navigate(`/messages?chatId=${chat._id}`);
+      }
+    } catch (error) {
+      console.error("Unable to open chat", error);
+    }
   };
 
   // Check if profile is private and user is not a follower
@@ -592,6 +621,7 @@ const Profile = () => {
                     {/* Message Button - hidden if privacy is 'no_one' or if 'followers' and not following */}
                     {profile?.message_privacy !== "no_one" && (profile?.message_privacy !== "followers" || isFollowing) && (
                       <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                        onClick={() => openChatWithUser(profile?._id)}
                         className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-white rounded-xl font-medium text-sm transition">
                         <MessageSquare size={15} />
                         <span className="hidden sm:inline">Message</span>
@@ -610,7 +640,7 @@ const Profile = () => {
                             initial={{ opacity: 0, scale: 0.9, y: -6 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9 }}
-                            className="absolute right-0 top-11 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-30 min-w-[160px]"
+                            className="absolute right-0 top-11 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-30 min-w-40"
                           >
                             <button
                               onClick={() => { setShowMoreMenu(false); setShowBlockReport(true); }}
@@ -694,7 +724,7 @@ const Profile = () => {
         </motion.div>
 
         {/* ── Tabs ── */}
-        <div className="bg-white dark:bg-slate-900 sticky top-[60px] z-20 border-b border-slate-200 dark:border-slate-800">
+        <div className="bg-white dark:bg-slate-900 sticky top-15 z-20 border-b border-slate-200 dark:border-slate-800">
           <div className="flex">
             {tabs.map((tab) => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
@@ -842,6 +872,7 @@ const Profile = () => {
           type={userList.type}
           userId={userId}
           onClose={() => setUserList(null)}
+          onMessageUser={openChatWithUser}
         />
       )}
     </MainLayout>

@@ -36,7 +36,7 @@ const Topbar = ({ onCreatePost }) => {
   const userMenuRef = useRef(null);
 
   // Use Redux unreadCount for instant updates and keep it in sync with query data
-  const { unreadCount: instantUnreadCount } = useSelector((state) => state.ui);
+  const { unreadCount: instantUnreadCount, unreadMessageCount } = useSelector((state) => state.ui);
   const unreadCount = instantUnreadCount;
 
   useEffect(() => {
@@ -198,21 +198,28 @@ const Topbar = ({ onCreatePost }) => {
             <Bell size={18} strokeWidth={1.8} />
             {unreadCount > 0 && (
               <span
-                className="absolute top-1 right-1 text-white text-[9px] rounded-full min-w-[16px] h-4 flex items-center justify-center font-bold px-0.5"
-                style={{ background: "linear-gradient(135deg, #EC4899, #F97316)" }}
+                className="absolute -top-0.5 -right-0.5 text-white text-[9px] rounded-full min-w-[16px] h-4 flex items-center justify-center font-bold px-0.5 shadow-sm"
+                style={{ background: "linear-gradient(135deg, #7C3AED, #EC4899)" }}
               >
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </motion.button>
 
-          {/* Messages */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={()=>navigate("/messages")}
-            className="p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition text-slate-600 dark:text-slate-300"
+            className="relative p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition text-slate-600 dark:text-slate-300"
           >
             <MessageCircle size={18} strokeWidth={1.8} />
+            {unreadMessageCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 text-white text-[9px] rounded-full min-w-[16px] h-4 flex items-center justify-center font-bold px-0.5 shadow-sm"
+                style={{ background: "linear-gradient(135deg, #7C3AED, #EC4899)" }}
+              >
+                {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+              </span>
+            )}
           </motion.button>
 
           {/* Dark Mode */}

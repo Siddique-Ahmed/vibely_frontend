@@ -3,6 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   notifications: [],
   unreadCount: 0,
+  unreadMessageCount: 0,
   showNotificationPanel: false,
   isDarkMode: localStorage.getItem("darkMode") === "true" || false,
   showModal: false,
@@ -30,6 +31,13 @@ const uiSlice = createSlice({
         state.unreadCount = action.payload;
       }
     },
+    setUnreadMessageCount: (state, action) => {
+      if (typeof action.payload === 'function') {
+        state.unreadMessageCount = action.payload(state.unreadMessageCount);
+      } else {
+        state.unreadMessageCount = action.payload;
+      }
+    },
     toggleNotificationPanel: (state) => {
       state.showNotificationPanel = !state.showNotificationPanel;
     },
@@ -53,6 +61,7 @@ const uiSlice = createSlice({
 export const {
   setNotifications,
   setUnreadCount,
+  setUnreadMessageCount,
   toggleNotificationPanel,
   toggleDarkMode,
   openModal,

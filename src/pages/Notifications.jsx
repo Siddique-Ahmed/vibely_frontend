@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useDispatch } from "react-redux";
 import { useNotifications, useMarkAsRead, useMarkAllAsRead, useDeleteNotification, useClearAllNotifications } from "../hooks/useApi";
 import { setUnreadCount } from "../redux/slices/uiSlice";
-import { useSocket } from "../context/SocketContext";
+import { useSocket } from "../hooks/useSocket";
 import { formatTimeAgo } from "../utils/formatters";
 import { Link } from "react-router-dom";
 import MainLayout from "../components/layouts/MainLayout";

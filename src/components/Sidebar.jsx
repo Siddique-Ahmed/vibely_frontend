@@ -11,13 +11,13 @@ import {
 const Sidebar = ({ onCreatePost }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const { isDarkMode, unreadCount } = useSelector((state) => state.ui);
+  const { isDarkMode, unreadCount, unreadMessageCount } = useSelector((state) => state.ui);
 
   const navItems = [
     { name: "Home",          path: "/feed",                  icon: Home },
     { name: "Explore",       path: "/explore",               icon: Search },
     { name: "Notifications", path: "/notifications",         icon: Bell, badge: unreadCount },
-    { name: "Messages",      path: "/messages",              icon: MessageCircle },
+    { name: "Messages",      path: "/messages",              icon: MessageCircle, badge: unreadMessageCount },
     { name: "Bookmarks",     path: "/bookmarks",             icon: Bookmark },
     { name: "Profile",       path: `/profile/${user?._id}`,  icon: User },
     { name: "Settings",      path: "/settings",              icon: Settings },
@@ -139,10 +139,10 @@ const Sidebar = ({ onCreatePost }) => {
                   <span>{item.name}</span>
                   {item.badge > 0 && (
                     <span
-                      className="ml-auto text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1"
+                      className="ml-auto text-white text-[10px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1 shadow-sm"
                       style={{
                         background:
-                          "linear-gradient(135deg, #EC4899, #F97316)",
+                          "linear-gradient(135deg, #7C3AED, #EC4899)",
                       }}
                     >
                       {item.badge > 99 ? "99+" : item.badge}

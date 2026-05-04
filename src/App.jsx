@@ -28,6 +28,8 @@ import PostDetail    from "./pages/PostDetail";
 import Settings      from "./pages/Settings";
 import Bookmarks     from "./pages/Bookmarks";
 import Messages      from "./pages/Messages";
+import ArchivedChats from "./pages/ArchivedChats";
+import ChatDetail from "./pages/ChatDetail";
 
 import { SocketProvider } from "./context/SocketContext";
 
@@ -108,8 +110,16 @@ const App = () => {
         element={<ProtectedRoute><Bookmarks /></ProtectedRoute>}
       />
       <Route
+        path="/messages/:chatId/detail"
+        element={<ProtectedRoute><ChatDetail /></ProtectedRoute>}
+      />
+      <Route
         path="/messages"
         element={<ProtectedRoute><Messages /></ProtectedRoute>}
+      />
+      <Route
+        path="/archived-chats"
+        element={<ProtectedRoute><ArchivedChats /></ProtectedRoute>}
       />
 
       {/* ── Root ── */}
