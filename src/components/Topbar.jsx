@@ -43,7 +43,7 @@ const Topbar = ({ onCreatePost }) => {
     if (unreadData?.data?.unreadCount != null) {
       dispatch(setUnreadCount(unreadData.data.unreadCount));
     }
-  }, [unreadData?.data?.unreadCount, dispatch]);
+  }, [unreadData?.data?.unreadCount]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {

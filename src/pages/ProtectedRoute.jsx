@@ -32,7 +32,7 @@ const ProtectedRoute = ({ children }) => {
         })
         .finally(() => setChecking(false));
     }
-  }, [token, user, dispatch]);
+  }, [token, user]);
 
   // Show loading while restoring session
   if (token && !user && checking) {

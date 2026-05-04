@@ -478,7 +478,7 @@ const Profile = () => {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { if (userId) fetchProfile(); }, [userId, currentUser?._id]);
+  useEffect(() => { if (userId) fetchProfile(); }, [userId]);
 
   const handleFollow = () => {
     const wasFollowing = isFollowing;

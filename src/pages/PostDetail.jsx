@@ -77,7 +77,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
     setLikesCount(Number(comment.likes_count) || 0);
     setLikes(comment.likes || []);
     setLikesByReaction(comment.likesByReaction || {});
-  }, [comment._id, comment.isLiked, comment.reaction_type, comment.likes_count]);
+  }, [comment._id, comment.isLiked, comment.reaction_type, comment.likes_count, comment.likes, comment.likesByReaction]);
 
   const handleLike = (reactionType = "like") => {
     // Prevent double mutations while one is pending

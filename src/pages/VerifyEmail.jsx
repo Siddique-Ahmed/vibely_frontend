@@ -39,7 +39,7 @@ const VerifyEmail = () => {
     if (!email) {
       navigate("/signup", { replace: true });
     }
-  }, [email, navigate]);
+  }, []);
 
   const handleOtpChange = (idx, val) => {
     if (!/^[0-9]?$/.test(val)) return; // Only digits

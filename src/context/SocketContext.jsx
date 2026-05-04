@@ -21,7 +21,7 @@ export const SocketProvider = ({ children }) => {
         if (unreadMsgData?.data?.unreadMessageCount != null) {
             dispatch(setUnreadMessageCount(unreadMsgData.data.unreadMessageCount));
         }
-    }, [unreadMsgData, dispatch]);
+    }, [unreadMsgData?.data?.unreadMessageCount, dispatch]);
 
     useEffect(() => {
         if (user) {
@@ -217,7 +217,7 @@ export const SocketProvider = ({ children }) => {
                 setSocket(null);
             }
         }
-    }, [user, dispatch]);
+    }, [user]);
 
     return (
         <SocketContext.Provider value={{ socket, onlineUsers }}>
