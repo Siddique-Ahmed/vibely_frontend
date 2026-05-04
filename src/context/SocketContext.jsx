@@ -14,7 +14,7 @@ export const SocketProvider = ({ children }) => {
     const { user } = useSelector((state) => state.auth);
     const dispatch = useDispatch();
     const queryClient = useQueryClient();
-    const { data: unreadMsgData } = useUnreadMessageCount();
+    const { data: unreadMsgData } = useUnreadMessageCount(!!user); // Only fetch when authenticated
 
     // Sync initial unread counts from API to Redux
     useEffect(() => {

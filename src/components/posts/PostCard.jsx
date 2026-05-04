@@ -156,17 +156,7 @@ const PostCard = ({ post, onLike, onShare }) => {
     setLikes(post?.likes ?? []);
     setLikesByReaction(post?.likesByReaction ?? {});
     setIsBookmarked(post?.isBookmarked ?? post?.is_bookmarked ?? false);
-  }, [
-    post?._id,
-    post?.isLiked,
-    post?.is_liked,
-    post?.reaction_type,
-    post?.likes_count,
-    post?.likes,
-    post?.likesByReaction,
-    post?.isBookmarked,
-    post?.is_bookmarked,
-  ]);
+  }, [post]);
 
   const commentsCount = post?.comments_count || 0;
 

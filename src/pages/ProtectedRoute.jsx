@@ -14,19 +14,24 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     // If token exists but no user loaded — fetch profile to restore session
     if (token && !user && !checking) {
+      console.log("[ProtectedRoute] Token found but no user. Fetching profile...");
       setChecking(true);
       apiClient
         .get("/users/my-profile")
         .then((res) => {
+          console.log("[ProtectedRoute] Profile fetch successful");
           const userData = res.data?.data;
           if (userData) {
+            console.log("[ProtectedRoute] Setting user:", userData._id);
             dispatch(setUser(userData));
           } else {
+            console.log("[ProtectedRoute] No user data in response");
             dispatch(logout());
             setAuthFailed(true);
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error("[ProtectedRoute] Profile fetch failed:", err.message);
           dispatch(logout());
           setAuthFailed(true);
         })

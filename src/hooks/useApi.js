@@ -105,12 +105,13 @@ export const useArchivedChats = (page = 1, limit = 20) => {
 };
 
 /** GET /api/v1/chats/unread-count */
-export const useUnreadMessageCount = () => {
+export const useUnreadMessageCount = (enabled = true) => {
   return useQuery({
     queryKey: ["unreadMessageCount"],
     queryFn: () =>
       apiClient.get("/chats/unread-count").then((res) => res.data),
     refetchInterval: 30000, // poll every 30s
+    enabled, // Only fetch if authenticated
   });
 };
 
@@ -850,12 +851,13 @@ export const useNotifications = (page = 1, limit = 10, status = "unread") => {
 };
 
 /** GET /api/v1/notifications/unreadCount */
-export const useUnreadCount = () => {
+export const useUnreadCount = (enabled = true) => {
   return useQuery({
     queryKey: ["unreadCount"],
     queryFn: () =>
       apiClient.get("/notifications/unreadCount").then((res) => res.data),
     refetchInterval: 30000, // poll every 30s
+    enabled, // Only fetch if authenticated
   });
 };
 

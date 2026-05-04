@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -29,6 +29,7 @@ const Login = () => {
 
     try {
       // Step 1: Login - get accessToken
+      console.log("[Login] Attempting login with identifier:", identifier);
       const response = await apiClient.post("/users/login", {
         email: identifier,
         username: identifier,
@@ -44,26 +45,33 @@ const Login = () => {
         return;
       }
 
+      console.log("[Login] Token received successfully");
+
       // Save token first so next request is authenticated
       dispatch(setToken(accessToken));
       localStorage.setItem("token", accessToken);
 
       // Step 2: Fetch user profile
-      const profileRes = await apiClient.get("/users/my-profile", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      console.log("[Login] Fetching user profile...");
+      const profileRes = await apiClient.get("/users/my-profile");
 
       const userData = profileRes.data?.data;
       if (userData) {
+        console.log("[Login] User profile received:", userData._id);
         dispatch(setUser(userData));
         localStorage.setItem("user", JSON.stringify(userData));
+      } else {
+        throw new Error("No user data received from profile endpoint");
       }
 
       // Step 3: Navigate to feed
+      console.log("[Login] Redirecting to feed...");
       navigate("/feed", { replace: true });
 
     } catch (err) {
-      const msg = err.response?.data?.message || "Login failed. Please try again.";
+      console.error("[Login] Error:", err);
+      const msg = err.response?.data?.message || err.message || "Login failed. Please try again.";
+      console.error("[Login] Error message:", msg);
       setErrorState(msg);
       dispatch(setError(msg));
       // Clear token if profile fetch fails

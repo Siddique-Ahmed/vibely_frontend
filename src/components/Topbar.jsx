@@ -25,7 +25,7 @@ const Topbar = ({ onCreatePost }) => {
   const { isDarkMode } = useSelector((state) => state.ui);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { data: unreadData } = useUnreadCount();
+  const { data: unreadData } = useUnreadCount(!!user); // Only fetch when authenticated
   const [showSearch, setShowSearch] = useState(false);
   const [mobileSearch, setMobileSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
