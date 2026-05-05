@@ -21,7 +21,6 @@ import CreateGroupModal from "../components/ui/CreateGroupModal";
 import { GroupMembersPanel } from "../components/ui/GroupMembersPanel";
 import ForwardMessageModal from "../components/ui/ForwardMessageModal";
 import { ScrollArea } from "../components/ui/scroll-area";
-import OnlineStatus from "../components/OnlineStatus";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +29,6 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import AvatarCustom from "../components/Avatar";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -78,7 +76,6 @@ const Messages = () => {
   const [confirmClearChat, setConfirmClearChat] = useState(false);
   const [confirmBlockUser, setConfirmBlockUser] = useState(false);
   const [confirmDeleteChat, setConfirmDeleteChat] = useState(false);
-  const [userStatusMap, setUserStatusMap] = useState({}); // Track online status for each user
   
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -98,7 +95,13 @@ const Messages = () => {
   
   const deleteEveryoneMutation = useDeleteMessageForEveryone();
   const deleteMeMutation = useDeleteMessageForMe();
-  const sendMessageMutation = useSendMessage({});
+  const sendMessageMutation = useSendMessage({
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["messages"],
+        exact: false,
+      }),
+  });
   const editMessageMutation = useEditMessage({
     onSuccess: () =>
       queryClient.invalidateQueries({
@@ -265,28 +268,6 @@ const Messages = () => {
     };
   }, [socket, chatIdStr, queryClient, markAsSeenMutation, user?._id]);
 
-  // Listen for user status changes (online/offline)
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleUserStatusChanged = (data) => {
-      console.log("👤 User status changed:", data);
-      setUserStatusMap((prev) => ({
-        ...prev,
-        [data.userId]: {
-          status: data.status,
-          timestamp: data.timestamp,
-        },
-      }));
-    };
-
-    socket.on("user status changed", handleUserStatusChanged);
-
-    return () => {
-      socket.off("user status changed", handleUserStatusChanged);
-    };
-  }, [socket]);
-
   const { data: messagesResponse, isLoading: loadingMessages } = useMessages(
     chatIdStr || undefined,
     1,
@@ -296,67 +277,23 @@ const Messages = () => {
 
   // Handlers
   const handleSend = async () => {
-    const filesToSend = previewFiles.length > 0 ? previewFiles.map((p) => p.file) : attachedFiles;
+    const filesToSend = previewFiles.length > 0 ? previewFiles.map(p => p.file) : attachedFiles;
     const sendChatId = chatIdStr || (activeChat?._id != null ? String(activeChat._id) : null);
     if (!sendChatId || (!draft.trim() && filesToSend.length === 0)) return;
-
-    if (editingMessage) {
-      try {
-        await editMessageMutation.mutateAsync({
-          messageId: editingMessage._id,
-          content: draft.trim(),
-        });
-        setDraft("");
-        setAttachedFiles([]);
-        setPreviewFiles([]);
-        setReplyTo(null);
-        setEditingMessage(null);
-      } catch (error) {
-        console.error("Operation failed", error);
-        showToast({ message: getChatActionError(error), type: "error" });
-      }
-      return;
-    }
-
-    const text = draft.trim();
-    const reply = replyTo;
-    const prevDraft = draft;
-    const prevReply = replyTo;
-    const prevPreview = previewFiles;
-    const prevAttached = attachedFiles;
-
-    setDraft("");
-    setReplyTo(null);
-    setPreviewFiles([]);
-    setAttachedFiles([]);
-
     try {
-      await sendMessageMutation.mutateAsync({
-        chatId: sendChatId,
-        content: text,
-        type:
-          filesToSend.length > 0
-            ? filesToSend[0].type.startsWith("video")
-              ? "video"
-              : "image"
-            : "text",
-        mediaFiles: filesToSend,
-        reply_to: reply?._id || null,
-        optimisticSender:
-          filesToSend.length === 0 && user
-            ? {
-                _id: user._id,
-                username: user.username,
-                profile: user.profile,
-              }
-            : undefined,
-      });
-      setEditingMessage(null);
+      if (editingMessage) {
+        await editMessageMutation.mutateAsync({ messageId: editingMessage._id, content: draft.trim() });
+      } else {
+        await sendMessageMutation.mutateAsync({
+          chatId: sendChatId,
+          content: draft.trim(),
+          type: filesToSend.length > 0 ? (filesToSend[0].type.startsWith('video') ? 'video' : 'image') : "text",
+          mediaFiles: filesToSend,
+          reply_to: replyTo?._id || null,
+        });
+      }
+      setDraft(""); setAttachedFiles([]); setPreviewFiles([]); setReplyTo(null); setEditingMessage(null);
     } catch (error) {
-      setDraft(prevDraft);
-      setReplyTo(prevReply);
-      setPreviewFiles(prevPreview);
-      setAttachedFiles(prevAttached);
       console.error("Operation failed", error);
       showToast({ message: getChatActionError(error), type: "error" });
     }
@@ -524,8 +461,8 @@ const Messages = () => {
   };
 
   return (
-    <MainLayout sidebar={<Sidebar />} topbar={<Topbar />} hideBottomNav={true}>
-      <div className="relative mx-auto flex h-[calc(100dvh-7.25rem)] min-h-0 w-full max-w-[1600px] flex-col overflow-hidden bg-background sm:h-[calc(100dvh-6.5rem)] md:h-[calc(100dvh-5.75rem)] lg:flex-row lg:rounded-2xl lg:border lg:border-border/30 lg:shadow-sm">
+    <MainLayout sidebar={<Sidebar />} topbar={<Topbar />}>
+      <div className="h-[calc(100vh-130px)] md:h-[calc(100vh-90px)] w-full max-w-7xl mx-auto flex overflow-hidden bg-background relative min-h-0">
         {/* Image Preview Overlay */}
         {previewFiles.length > 0 && (
           <div className="absolute inset-0 z-50 bg-slate-900/95 flex flex-col animate-in fade-in zoom-in duration-300">
@@ -551,38 +488,26 @@ const Messages = () => {
         )}
 
         {/* Chat List */}
-        <div
-          className={cn(
-            "flex min-h-0 w-full shrink-0 flex-col border-border/40 bg-muted/10 transition-colors dark:bg-muted/5 lg:max-w-[min(100%,20rem)] lg:border-r xl:max-w-sm",
-            activeChat ? "hidden lg:flex" : "flex flex-1 lg:flex-none",
-          )}
-        >
-            <div className="space-y-4 p-4 sm:space-y-5 sm:p-5">
-             <div className="flex items-center justify-between gap-2">
-               <h1 className="truncate text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 sm:text-3xl">
-                 Messages
-               </h1>
-               <Button
-                 variant="ghost"
-                 size="icon"
-                 onClick={() => setShowNewGroupModal(true)}
-                 className="h-10 min-h-[44px] min-w-[44px] shrink-0 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/25 dark:hover:bg-purple-900/40"
-               >
+        <div className={cn("w-full lg:w-95 shrink-0 flex flex-col border-r border-border/40 bg-background transition-all duration-300 min-h-0", activeChat ? "hidden lg:flex" : "flex")}>
+            <div className="p-6 space-y-5">
+             <div className="flex items-center justify-between">
+               <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">Messages</h1>
+               <Button variant="ghost" size="icon" onClick={() => setShowNewGroupModal(true)} className="rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 hover:bg-purple-100 transition-all">
                  <Edit size={20} />
                </Button>
              </div>
              
-             <div className="group relative">
-               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-purple-500 sm:left-3.5" />
-               <Input
-                 placeholder="Search conversations…"
-                 className="h-11 rounded-xl border border-border/50 bg-background pl-10 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-purple-500/20 sm:h-12 sm:rounded-2xl sm:pl-11"
+             <div className="relative group">
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-purple-500 transition-colors" size={18} />
+               <Input 
+                 placeholder="Search conversations..." 
+                 className="pl-11 h-12 rounded-2xl bg-slate-100/50 dark:bg-slate-900/50 border-none focus-visible:ring-2 focus-visible:ring-purple-500/20 transition-all" 
                />
              </div>
 
-             <Button
-               variant="outline"
-               className="group w-full justify-start gap-3 rounded-xl border-purple-100 py-6 text-muted-foreground shadow-sm transition-all hover:bg-purple-50 hover:text-purple-700 dark:border-purple-900/40 dark:hover:bg-purple-950/50 sm:rounded-2xl sm:py-7"
+             <Button 
+               variant="outline" 
+               className="w-full justify-start gap-3 rounded-2xl border-purple-100 dark:border-purple-900/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-all text-muted-foreground py-7 shadow-sm group"
                onClick={() => navigate("/archived-chats")}
              >
                <div className="h-10 w-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -596,7 +521,7 @@ const Messages = () => {
              </Button>
            </div>
            
-           <ScrollArea className="min-h-0 flex-1 px-2 pb-4 sm:px-3 sm:pb-6">
+           <ScrollArea className="flex-1 px-3 pb-6">
              <div className="space-y-1">
                {chats.map((chat) => (
                  <div
@@ -606,31 +531,30 @@ const Messages = () => {
                     setShowInfo(false);
                   }}
                   className={cn(
-                    "group relative mb-1 flex cursor-pointer items-center gap-3 rounded-2xl p-3 transition-all duration-200 sm:gap-4 sm:rounded-3xl sm:p-3.5",
+                    "flex items-center gap-4 p-4 rounded-3xl cursor-pointer transition-all duration-300 relative group mb-1",
                     chatIdStr === String(chat._id)
-                       ? "bg-purple-600 text-white shadow-md shadow-purple-500/25 ring-1 ring-purple-500/20"
-                       : "hover:bg-background hover:shadow-sm dark:hover:bg-slate-900/50",
+                       ? "bg-purple-600 text-white shadow-lg shadow-purple-500/30 -translate-y-0.5"
+                       : "hover:bg-slate-100 dark:hover:bg-slate-900/40"
                    )}
                  >
                    <div className="relative shrink-0">
-                    <AvatarCustom
-                      profilePicture={getChatAvatar(chat)}
-                      fullName={getChatTitle(chat)}
-                      username={getChatTitle(chat)}
-                      size="md"
-                      className={cn(
-                        "h-12 w-12 border-2 transition-all sm:h-14 sm:w-14",
-                        chatIdStr === String(chat._id) ? "border-white/30 scale-105" : "border-background"
-                      )}
-                    />
+                     <Avatar className={cn(
+                       "h-14 w-14 border-2 transition-all",
+                       chatIdStr === String(chat._id) ? "border-white/30 scale-105" : "border-background"
+                     )}>
+                       <AvatarImage src={getChatAvatar(chat)} />
+                       <AvatarFallback className={cn(
+                         "font-bold",
+                         chatIdStr === String(chat._id) ? "bg-white/20 text-white" : "bg-purple-100 text-purple-700"
+                       )}>
+                         {getChatTitle(chat).substring(0, 2).toUpperCase()}
+                       </AvatarFallback>
+                     </Avatar>
                      {!chat.isGroup && (
-                       <div className="absolute bottom-0.5 right-0.5 bg-background rounded-full p-0.5">
-                         <OnlineStatus 
-                           isOnline={chat.participants?.[0]?.is_online || chat.participants?.[1]?.is_online}
-                           lastSeen={chat.participants?.[0]?.last_seen || chat.participants?.[1]?.last_seen}
-                           size="sm"
-                         />
-                       </div>
+                       <span className={cn(
+                         "absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background",
+                         "bg-green-500 shadow-sm"
+                       )} />
                      )}
                    </div>
                    
@@ -669,112 +593,35 @@ const Messages = () => {
         </div>
 
         {/* Chat Window */}
-        <div
-          className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col bg-background transition-colors",
-            !activeChat ? "hidden lg:flex" : "flex",
-          )}
-        >
+        <div className={cn("flex-1 flex flex-col bg-background transition-all duration-300 min-h-0", !activeChat ? "hidden lg:flex" : "flex")}>
           {activeChat ? (
             <>
                {/* Header */}
-               <div className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-background/95 px-3 backdrop-blur-md sm:h-16 sm:px-4 lg:px-5">
-                 <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     onClick={() => setActiveChatId(null)}
-                     className="h-10 min-h-[44px] min-w-[44px] shrink-0 rounded-full lg:hidden"
-                   >
-                     <ArrowLeft size={20} />
-                   </Button>
-                   <div className="relative shrink-0">
-                     <Avatar className="h-10 w-10 border-2 border-purple-100 shadow-sm dark:border-purple-900/50 sm:h-11 sm:w-11">
+               <div className="h-20 px-6 border-b border-border/40 bg-background/80 backdrop-blur-md flex items-center justify-between shrink-0 z-10">
+                 <div className="flex items-center gap-4">
+                   <Button variant="ghost" size="icon" onClick={() => setActiveChatId(null)} className="lg:hidden rounded-full"><ArrowLeft size={20} /></Button>
+                   <div className="relative">
+                     <Avatar className="h-11 w-11 border-2 border-purple-100 dark:border-purple-900/50 shadow-sm">
                        <AvatarImage src={getChatAvatar(activeChat)} />
                        <AvatarFallback className="bg-linear-to-br from-purple-100 to-indigo-100 text-purple-700 font-bold">{getChatTitle(activeChat).substring(0, 2).toUpperCase()}</AvatarFallback>
                      </Avatar>
-                     {!activeChat?.isGroup && otherDmUser && userStatusMap[otherDmUser._id]?.status === "online" && (
-                       <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
-                     )}
+                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
                    </div>
-                   <div className="min-w-0 flex-1">
-                     <h2 className="truncate text-sm font-black leading-tight text-slate-900 dark:text-slate-100 sm:text-base">
-                       {getChatTitle(activeChat)}
-                     </h2>
-                     {!activeChat?.isGroup && otherDmUser ? (
-                       userStatusMap[otherDmUser._id]?.status === "online" ? (
-                         <p className="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400">
-                           <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-green-500" />
-                           Active
-                         </p>
-                       ) : otherDmUser.last_seen ? (
-                         <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                           Last seen {new Date(otherDmUser.last_seen).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                         </p>
-                       ) : (
-                         <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                           Offline
-                         </p>
-                       )
-                     ) : (
-                       <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                         Group chat
-                       </p>
-                     )}
+                   <div className="min-w-0">
+                     <h2 className="text-[16px] font-black leading-none truncate text-slate-900 dark:text-slate-100">{getChatTitle(activeChat)}</h2>
+                     <p className="text-[10px] text-green-500 font-bold mt-1.5 flex items-center gap-1.5 uppercase tracking-widest">
+                       <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Online
+                     </p>
                    </div>
                  </div>
-                 <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     className="hidden h-10 min-h-[44px] min-w-[44px] rounded-xl text-muted-foreground hover:bg-purple-50 hover:text-purple-600 sm:inline-flex"
-                     type="button"
-                   >
-                     <Phone size={18} />
-                   </Button>
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     className="hidden h-10 min-h-[44px] min-w-[44px] rounded-xl text-muted-foreground hover:bg-purple-50 hover:text-purple-600 sm:inline-flex"
-                     type="button"
-                   >
-                     <Video size={18} />
-                   </Button>
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     onClick={() => {
-                       openChatDetail();
-                       setShowInfo(false);
-                     }}
-                     className="h-10 min-h-[44px] min-w-[44px] rounded-xl text-muted-foreground hover:bg-purple-50 hover:text-purple-600"
-                     title="Chat details"
-                     type="button"
-                   >
-                     <LayoutList size={18} />
-                   </Button>
-                   <Button
-                     variant="ghost"
-                     size="icon"
-                     onClick={() => setShowInfo(!showInfo)}
-                     className={cn(
-                       "h-10 min-h-[44px] min-w-[44px] rounded-xl transition-all",
-                       showInfo
-                         ? "bg-purple-600 text-white shadow-md shadow-purple-500/25"
-                         : "text-muted-foreground hover:bg-purple-50 hover:text-purple-600",
-                     )}
-                     type="button"
-                   >
-                     <Info size={18} />
-                   </Button>
+                 <div className="flex items-center gap-2">
+                   <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50 transition-all"><Phone size={18} /></Button>
+                   <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50 transition-all"><Video size={18} /></Button>
+                   <Button variant="ghost" size="icon" onClick={() => { openChatDetail(); setShowInfo(false); }} className="rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50" title="Chat details"><LayoutList size={18} /></Button>
+                   <Button variant="ghost" size="icon" onClick={() => setShowInfo(!showInfo)} className={cn("rounded-xl transition-all", showInfo ? "bg-purple-600 text-white shadow-lg shadow-purple-500/30" : "text-muted-foreground hover:text-purple-600 hover:bg-purple-50")}><Info size={18} /></Button>
                    <DropdownMenu>
                      <DropdownMenuTrigger asChild>
-                       <Button
-                         variant="ghost"
-                         size="icon"
-                         className="h-10 min-h-[44px] min-w-[44px] rounded-xl text-muted-foreground hover:bg-purple-50 hover:text-purple-600"
-                         type="button"
-                       >
+                       <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50 transition-all">
                          <MoreVertical size={18} />
                        </Button>
                      </DropdownMenuTrigger>
@@ -845,7 +692,7 @@ const Messages = () => {
                       <Button variant="ghost" size="icon" onClick={() => setReplyTo(null)} className="h-6 w-6 hover:bg-purple-200 dark:hover:bg-purple-900">×</Button>
                     </div>
                   )}
-                  <div className="sticky bottom-0 z-10 shrink-0 border-t border-border/40 bg-background">
+                  <div className="shrink-0 border-t border-border/40 bg-background">
                     <MessageComposer
                       message={draft}
                       onMessageChange={setDraft}
@@ -863,7 +710,7 @@ const Messages = () => {
 
                 {/* Info Sidebar */}
                 {showInfo && (
-                  <div className="hidden w-full max-w-xs shrink-0 flex-col border-l border-border/40 bg-muted/5 dark:bg-background lg:flex xl:max-w-sm">
+                  <div className="w-75 border-l border-border/50 bg-background hidden lg:flex flex-col animate-in slide-in-from-right duration-300">
                      <div className="p-6 flex flex-col items-center text-center border-b border-border/50">
                        <Avatar className="w-24 h-24 mb-4 border-4 border-purple-50">
                          <AvatarImage src={getChatAvatar(activeChat)} />

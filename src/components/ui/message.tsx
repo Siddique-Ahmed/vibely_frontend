@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Paperclip, Pin, Send, Loader2 } from "lucide-react";
+import { Clock3, Paperclip, Pin, Send, MoreVertical, Reply, Smile } from "lucide-react";
 import { Button } from "./button";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 import { Textarea } from "./textarea";
@@ -163,31 +163,25 @@ export function MessageComposer({
   };
 
   return (
-    <div className="border-t border-border/40 bg-background/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-3xl items-end gap-2 px-3 py-2.5 sm:gap-2.5 sm:px-4 sm:py-3 lg:max-w-4xl">
+    <div className="border-t border-border/50 bg-background/95 backdrop-blur-sm p-3 sm:p-4">
+      <div className="flex items-end gap-2 max-w-5xl mx-auto">
         <Button
           type="button"
           variant="outline"
           size="icon"
           onClick={onAttach}
-          disabled={disabled || loading}
-          className="h-11 min-h-[44px] min-w-[44px] shrink-0 rounded-2xl border-dashed border-border/80 hover:border-purple-500/60 hover:bg-purple-500/5 hover:text-purple-600 sm:h-12 sm:min-h-[48px] sm:min-w-[48px]"
+          className="h-11 w-11 shrink-0 rounded-2xl border-dashed border-border hover:border-purple-500 hover:text-purple-600 transition-colors"
         >
-          <Paperclip size={18} className="sm:h-5 sm:w-5" />
+          <Paperclip size={18} />
         </Button>
 
-        <div className="relative min-w-0 flex-1">
+        <div className="relative flex-1">
           <Textarea
             value={message}
             onChange={(event) => onMessageChange(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message…"
-            disabled={disabled || loading}
-            className={cn(
-              "min-h-[44px] max-h-32 resize-none rounded-2xl border bg-muted/25 px-3.5 py-2.5 text-sm transition-all sm:min-h-[48px] sm:px-4 sm:py-3",
-              "border-border/60 focus-visible:border-purple-500/50 focus-visible:ring-2 focus-visible:ring-purple-500/15",
-              loading && "border-purple-500/30 ring-1 ring-purple-500/10",
-            )}
+            placeholder="Type a message..."
+            className="min-h-[44px] max-h-32 resize-none rounded-2xl border-border/50 bg-muted/30 px-4 py-3 text-sm focus-visible:ring-purple-500/20 focus-visible:border-purple-500 transition-all"
             rows={1}
           />
         </div>
@@ -197,19 +191,12 @@ export function MessageComposer({
           size="icon"
           disabled={disabled || loading || !message.trim()}
           onClick={onSend}
-          aria-label="Send message"
           className={cn(
-            "h-11 min-h-[44px] min-w-[44px] shrink-0 rounded-2xl shadow-md transition-all active:scale-[0.98] sm:h-12 sm:min-h-[48px] sm:min-w-[48px]",
-            message.trim() && !loading
-              ? "bg-purple-600 text-white hover:bg-purple-700"
-              : "bg-muted text-muted-foreground",
+            "h-11 w-11 shrink-0 rounded-2xl shadow-lg transition-all active:scale-95",
+            message.trim() ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-muted text-muted-foreground"
           )}
         >
-          {loading ? (
-            <Loader2 size={18} className="animate-spin sm:h-5 sm:w-5" />
-          ) : (
-            <Send size={18} className="sm:h-5 sm:w-5" />
-          )}
+          <Send size={18} className={cn(loading && "animate-pulse")} />
         </Button>
       </div>
     </div>

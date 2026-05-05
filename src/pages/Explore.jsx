@@ -12,6 +12,8 @@ import {
   ImageIcon,
   Users,
   Search,
+  UserCheck,
+  UserPlus,
 } from "lucide-react";
 import Avatar from "../components/Avatar";
 
