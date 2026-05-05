@@ -11,6 +11,8 @@ import Topbar from "../components/Topbar";
 import CreatePostModal from "../components/CreatePostModal";
 import ImageLightbox from "../components/ImageLightbox";
 import BlockReportModal from "../components/BlockReportModal";
+import OnlineStatus from "../components/OnlineStatus";
+import Avatar from "../components/Avatar";
 import { formatTimeAgo } from "../utils/formatters";
 import { processMentions } from "../utils/textProcessors";
 import {
@@ -126,8 +128,13 @@ const EditProfileModal = ({ profile, onClose, onSaved }) => {
           {/* Avatar */}
           <div className="px-5 pb-2 -mt-10 relative z-10">
             <div className="relative w-20 h-20 cursor-pointer" onClick={() => avatarRef.current?.click()}>
-              <img src={avatarPreview || "/avatar.png"} alt="Avatar"
-                className="w-20 h-20 rounded-full object-cover border-4 border-white dark:border-slate-900 shadow-lg" />
+              <Avatar
+                profilePicture={avatarPreview}
+                fullName={form.full_name}
+                username={form.username}
+                size="xl"
+                className="w-20 h-20 border-4 border-white dark:border-slate-900 shadow-lg"
+              />
               <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition">
                 <Camera size={18} className="text-white" />
               </div>
@@ -335,10 +342,11 @@ const UserListModal = ({ title, userId, type, onClose, onMessageUser }) => {
                     key={u._id}
                     className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
                   >
-                    <img
-                      src={u.profile?.profile_picture || "/avatar.png"}
-                      alt={u.username}
-                      className="w-10 h-10 rounded-full object-cover"
+                    <Avatar
+                      profilePicture={u.profile?.profile_picture}
+                      fullName={u.profile?.full_name}
+                      username={u.username}
+                      size="md"
                     />
                     <div className="flex-1 min-w-0">
                       <Link
@@ -571,12 +579,20 @@ const Profile = () => {
               {/* Avatar */}
               <div className="relative -mt-16 sm:-mt-20">
                 <div className="relative">
-                  <img
-                    src={profile?.profile?.profile_picture || "/avatar.png"}
-                    alt={profile?.username}
+                  <Avatar
+                    profilePicture={profile?.profile?.profile_picture}
+                    fullName={profile?.profile?.full_name}
+                    username={profile?.username}
+                    size="3xl"
                     onClick={() => profile?.profile?.profile_picture && setLightboxSrc(profile.profile.profile_picture)}
-                    className={`w-28 h-28 sm:w-36 sm:h-36 rounded-full object-cover border-4 border-white dark:border-slate-900 shadow-xl ${profile?.profile?.profile_picture ? "cursor-zoom-in" : ""}`}
+                    className={`border-4 border-white dark:border-slate-900 shadow-xl ${profile?.profile?.profile_picture ? "cursor-zoom-in" : ""}`}
                   />
+                  {/* Online Status Indicator */}
+                  {!isOwn && (
+                    <div className="absolute bottom-2 right-2 bg-white dark:bg-slate-900 rounded-full p-1">
+                      <OnlineStatus isOnline={profile?.is_online} lastSeen={profile?.last_seen} size="lg" />
+                    </div>
+                  )}
                   {isOwn && (
                     <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                       onClick={() => setShowEdit(true)}
@@ -661,7 +677,10 @@ const Profile = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white leading-none">
                 {profile?.profile?.full_name || profile?.username}
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-0.5">@{profile?.username}</p>
+              <div className="flex items-center gap-3 mt-0.5">
+                <p className="text-slate-500 dark:text-slate-400">@{profile?.username}</p>
+                {!isOwn && <OnlineStatus isOnline={profile?.is_online} lastSeen={profile?.last_seen} size="sm" showLabel={true} />}
+              </div>
               {profile?.profile?.bio && (
                 <p className="text-slate-700 dark:text-slate-300 mt-3 text-sm leading-relaxed max-w-lg">
                   {processMentions(profile.profile.bio, currentUser?.blocked_usernames)}

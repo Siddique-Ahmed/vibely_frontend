@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, Send } from "lucide-react";
 import { Button } from "./button";
-import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+import AvatarCustom from "../Avatar";
 import { ScrollArea } from "./scroll-area";
 import { cn } from "../../lib/utils";
 
@@ -88,12 +88,13 @@ export function ForwardMessageModal({ open, onClose, chats = [], message, onForw
                         : ""
                     )}
                   >
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={getChatAvatar(chat)} />
-                      <AvatarFallback className="bg-purple-100 text-purple-700">
-                        {getChatTitle(chat).substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <AvatarCustom
+                      profilePicture={getChatAvatar(chat)}
+                      fullName={getChatTitle(chat)}
+                      username={getChatTitle(chat)}
+                      size="md"
+                      className="w-10 h-10"
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{getChatTitle(chat)}</p>
                       <p className="text-xs text-muted-foreground truncate">

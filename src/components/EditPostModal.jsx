@@ -17,6 +17,7 @@ import {
   Edit3,
 } from "lucide-react";
 import MentionSuggestions from "./MentionSuggestions";
+import Avatar from "./Avatar";
 
 const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
   const { user } = useSelector((state) => state.auth);
@@ -205,10 +206,12 @@ const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
             <div className="flex-1 overflow-y-auto pb-20 sm:pb-0">
               {/* User Info */}
               <div className="flex items-center gap-3 px-5 pt-4 pb-3">
-                <img
-                  src={user?.profile?.profile_picture || "/avatar.png"}
-                  alt={user?.username}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700"
+                <Avatar
+                  profilePicture={user?.profile?.profile_picture}
+                  fullName={user?.profile?.full_name}
+                  username={user?.username}
+                  size="md"
+                  className="border-2 border-slate-200 dark:border-slate-700"
                 />
                 <div>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">

@@ -25,6 +25,7 @@ import { processMentions } from "../../utils/textProcessors";
 import LikesModal from "./LikesModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import EditPostModal from "../EditPostModal";
+import Avatar from "../Avatar";
 import { useRef } from "react";
 import { useEffect } from "react";
 
@@ -345,18 +346,23 @@ const PostCard = ({ post, onLike, onShare }) => {
             className="flex items-center gap-3 group"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative">
-              <img
-                src={post.created_by?.profile?.profile_picture || "/avatar.png"}
-                alt={post.created_by?.username}
-                className="w-10 h-10 rounded-full object-cover border-2 border-transparent transition"
-                style={{}}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.borderColor = "rgba(124,58,237,0.5)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.borderColor = "transparent")
-                }
+            <div
+              className="relative"
+              onMouseEnter={(e) => {
+                const child = e.currentTarget.querySelector("img, div");
+                if (child) child.style.borderColor = "rgba(124,58,237,0.5)";
+              }}
+              onMouseLeave={(e) => {
+                const child = e.currentTarget.querySelector("img, div");
+                if (child) child.style.borderColor = "transparent";
+              }}
+            >
+              <Avatar
+                profilePicture={post.created_by?.profile?.profile_picture}
+                fullName={post.created_by?.profile?.full_name}
+                username={post.created_by?.username}
+                size="md"
+                className="border-2 border-transparent transition"
               />
               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
             </div>
@@ -568,10 +574,11 @@ const PostCard = ({ post, onLike, onShare }) => {
                             to={`/profile/${like._id}`}
                             className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition group"
                           >
-                            <img
-                              src={like.profile_picture || "/avatar.png"}
-                              alt={like.username}
-                              className="w-7 h-7 rounded-full object-cover"
+                            <Avatar
+                              profilePicture={like.profile_picture}
+                              fullName={like.full_name}
+                              username={like.username}
+                              size="sm"
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-slate-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">

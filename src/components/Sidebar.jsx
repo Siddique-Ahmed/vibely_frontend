@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../redux/slices/authSlice";
+import Avatar from "./Avatar";
 import {
   Home, Search, Bell, MessageCircle, Bookmark,
   User, Settings, PlusCircle, LogOut,
@@ -191,15 +192,12 @@ const Sidebar = ({ onCreatePost }) => {
         >
           <div className="flex items-center gap-3 mb-3">
             <div className="relative">
-              <img
-                src={user?.profile?.profile_picture || "/avatar.png"}
-                alt={user?.username}
-                className="w-9 h-9 rounded-full object-cover"
-                style={{
-                  border: "2px solid transparent",
-                  backgroundClip: "padding-box",
-                  boxShadow: "0 0 0 2px #EC4899",
-                }}
+              <Avatar
+                profilePicture={user?.profile?.profile_picture}
+                fullName={user?.profile?.full_name}
+                username={user?.username}
+                size="md"
+                className="border-2 border-pink-500"
               />
               <div
                 className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"

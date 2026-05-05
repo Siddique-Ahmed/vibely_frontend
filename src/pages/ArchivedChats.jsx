@@ -8,6 +8,7 @@ import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import { Button } from "../components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import AvatarCustom from "../components/Avatar";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Badge } from "../components/ui/badge";
 import { cn } from "../lib/utils";
@@ -126,12 +127,13 @@ const ArchivedChats = () => {
                     className="group bg-background hover:bg-slate-50 dark:hover:bg-slate-900/40 border border-border/40 rounded-3xl p-5 flex items-center gap-5 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-0.5"
                   >
                     <div className="relative">
-                      <Avatar className="h-16 w-16 border-2 border-white dark:border-slate-800 shadow-sm">
-                        <AvatarImage src={getChatAvatar(chat)} />
-                        <AvatarFallback className="text-lg bg-linear-to-br from-purple-100 to-indigo-100 text-purple-700 font-bold">
-                          {getChatTitle(chat).substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AvatarCustom
+                        profilePicture={getChatAvatar(chat)}
+                        fullName={getChatTitle(chat)}
+                        username={getChatTitle(chat)}
+                        size="lg"
+                        className="h-16 w-16 border-2 border-white dark:border-slate-800 shadow-sm"
+                      />
                       {chat.isGroup && (
                         <div className="absolute -bottom-1 -right-1 bg-purple-600 text-white p-1 rounded-lg border-2 border-background">
                           <MessageSquare size={12} />

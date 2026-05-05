@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
+import Avatar from "../Avatar";
 
 const reactionEmojis = {
   like: "👍",
@@ -108,10 +109,12 @@ const LikesModal = ({ isOpen, onClose, likes = [], likesByReaction = {}, likesCo
                       onClick={onClose}
                       className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition group"
                     >
-                      <img
-                        src={like.profile_picture || "/avatar.png"}
-                        alt={like.username}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700"
+                      <Avatar
+                        profilePicture={like.profile_picture}
+                        fullName={like.full_name}
+                        username={like.username}
+                        size="md"
+                        className="border-2 border-slate-200 dark:border-slate-700"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-slate-900 dark:text-white truncate group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">

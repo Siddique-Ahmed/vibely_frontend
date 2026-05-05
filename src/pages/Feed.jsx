@@ -12,6 +12,7 @@ import MainLayout from "../components/layouts/MainLayout";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import CreatePostModal from "../components/CreatePostModal";
+import Avatar from "../components/Avatar";
 import {
   Image, Smile, MapPin, Loader2, AlertCircle,
   RefreshCw, Newspaper, Users, Globe, UserCheck,
@@ -105,8 +106,13 @@ const Feed = () => {
           className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 mb-4 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
             <Link to={`/profile/${user?._id}`}>
-              <img src={user?.profile?.profile_picture || "/avatar.png"} alt="You"
-                className="w-10 h-10 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 flex-shrink-0" />
+              <Avatar
+                profilePicture={user?.profile?.profile_picture}
+                fullName={user?.profile?.full_name}
+                username={user?.username}
+                size="md"
+                className="border-2 border-slate-200 dark:border-slate-700"
+              />
             </Link>
             <motion.button whileTap={{ scale: 0.98 }} onClick={() => setShowCreatePost(true)}
               className="flex-1 text-left bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 transition cursor-pointer">

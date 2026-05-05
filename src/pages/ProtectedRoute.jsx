@@ -74,6 +74,11 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Check if account is deactivated
+  if (user && user.is_active === false) {
+    return <Navigate to="/account-activation" replace />;
+  }
+
   return children;
 };
 

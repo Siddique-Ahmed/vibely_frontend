@@ -8,9 +8,12 @@ import MainLayout from "../components/layouts/MainLayout";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import {
-  Search, Users, ImageIcon, UserPlus, UserCheck,
   TrendingUp, Heart, MessageCircle, Loader2, Edit3,
+  ImageIcon,
+  Users,
+  Search,
 } from "lucide-react";
+import Avatar from "../components/Avatar";
 
 const Explore = () => {
   const { user: currentUser } = useSelector((s) => s.auth);
@@ -157,8 +160,13 @@ const Explore = () => {
                   transition={{ delay: idx * 0.04 }}
                   className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition shadow-sm">
                   <Link to={`/profile/${u._id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                    <img src={u.profile?.profile_picture || "/avatar.png"} alt={u.username}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 dark:border-slate-800 flex-shrink-0" />
+                    <Avatar
+                      profilePicture={u.profile?.profile_picture}
+                      fullName={u.profile?.full_name}
+                      username={u.username}
+                      size="md"
+                      className="w-12 h-12 border-2 border-slate-100 dark:border-slate-800 flex-shrink-0"
+                    />
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-900 dark:text-white truncate">
                         {u.profile?.full_name || u.username}

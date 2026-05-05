@@ -13,6 +13,7 @@ import { Button } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+import AvatarCustom from "../Avatar";
 import { cn } from "../../lib/utils";
 import { showToast } from "../Toast";
 
@@ -286,15 +287,13 @@ export function CreateGroupModal({
                                 : "hover:bg-background/95",
                             )}
                           >
-                            <Avatar className="size-11 border border-border/60 shadow-sm">
-                              <AvatarImage
-                                src={participant.profile?.profile_picture}
-                              />
-                              <AvatarFallback className="bg-purple-100 text-xs font-bold text-purple-900">
-                                {participant.username?.substring(0, 2).toUpperCase() ||
-                                  "?"}
-                              </AvatarFallback>
-                            </Avatar>
+                            <AvatarCustom
+                              profilePicture={participant.profile?.profile_picture}
+                              fullName={participant.profile?.full_name}
+                              username={participant.username}
+                              size="md"
+                              className="size-11 border border-border/60 shadow-sm"
+                            />
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold">
                                 {participant.username ||

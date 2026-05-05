@@ -19,6 +19,7 @@ import {
   MessageSquareOff, MoreHorizontal, ArrowLeft,
 } from "lucide-react";
 import MentionSuggestions from "../components/MentionSuggestions";
+import Avatar from "../components/Avatar";
 import { useRef, useEffect } from "react";
 
 const reactions = [
@@ -197,10 +198,12 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
   return (
     <>
       <div className={`flex gap-3 ${isReply ? "mt-2" : ""}`}>
-        <img
-          src={comment.created_by?.profile?.profile_picture || "/avatar.png"}
-          alt={comment.created_by?.username}
-          className={`${isReply ? "w-6 h-6" : "w-8 h-8"} rounded-full object-cover flex-shrink-0 mt-0.5`}
+        <Avatar
+          profilePicture={comment.created_by?.profile?.profile_picture}
+          fullName={comment.created_by?.profile?.full_name}
+          username={comment.created_by?.username}
+          size="sm"
+          className={`${isReply ? "w-6 h-6" : "w-8 h-8"} flex-shrink-0 mt-0.5`}
         />
         <div className="flex-1 group">
           <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-none px-3 py-2 max-w-fit">
@@ -295,10 +298,12 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
           {/* Reply input */}
           {showReplyInput && !isReply && (
             <div className="mt-3 ml-2 flex gap-2 items-end">
-              <img
-                src={currentUser?.profile?.profile_picture || "/avatar.png"}
-                alt="You"
-                className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+              <Avatar
+                profilePicture={currentUser?.profile?.profile_picture}
+                fullName={currentUser?.profile?.full_name}
+                username={currentUser?.username}
+                size="sm"
+                className="w-6 h-6 flex-shrink-0"
               />
               <div className="flex-1 relative">
                 <div className="bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 flex items-center gap-2">
@@ -687,10 +692,12 @@ const PostDetail = () => {
                   to={`/profile/${post.created_by?._id}`}
                   className="flex items-center gap-3"
                 >
-                  <img
-                    src={post.created_by?.profile?.profile_picture || "/avatar.png"}
-                    alt={post.created_by?.username}
-                    className="w-10 h-10 rounded-full object-cover border-2"
+                  <Avatar
+                    profilePicture={post.created_by?.profile?.profile_picture}
+                    fullName={post.created_by?.profile?.full_name}
+                    username={post.created_by?.username}
+                    size="md"
+                    className="w-10 h-10 border-2"
                     style={{ borderColor: "#EC4899" }}
                   />
                   <div>
@@ -893,10 +900,12 @@ const PostDetail = () => {
 
                 {/* Comment Input */}
                 <div className="flex items-center gap-2">
-                  <img
-                    src={currentUser?.profile?.profile_picture || "/avatar.png"}
-                    alt="You"
-                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                  <Avatar
+                    profilePicture={currentUser?.profile?.profile_picture}
+                    fullName={currentUser?.profile?.full_name}
+                    username={currentUser?.username}
+                    size="sm"
+                    className="w-8 h-8 flex-shrink-0"
                   />
                   <div className="flex-1 relative">
                     <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full pr-1">

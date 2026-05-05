@@ -59,9 +59,22 @@ export const useSearchMessages = (chatId, q = "", page = 1, limit = 50) => {
 /** POST /api/v1/messages/send-message */
 export const useSendMessage = (options = {}) => {
   const queryClient = useQueryClient();
+  const { onSuccess: userOnSuccess, onMutate: userOnMutate, onError: userOnError, ...rest } =
+    options;
+
   return useMutation({
-    ...options,
-    mutationFn: ({ chatId, content, type = "text", mediaFiles = [], reply_to = null }) => {
+    ...rest,
+    mutationFn: ({
+      chatId,
+      content,
+      type = "text",
+      mediaFiles = [],
+      reply_to = null,
+      optimisticSender: _os,
+      ..._rest
+    }) => {
+      void _os;
+      void _rest;
       const formData = new FormData();
       formData.append("chatId", chatId);
       formData.append("content", content || "");
@@ -75,9 +88,87 @@ export const useSendMessage = (options = {}) => {
         })
         .then((res) => res.data);
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["messages", variables.chatId], exact: true });
+    onMutate: async (variables) => {
+      await userOnMutate?.(variables);
+      const { chatId, content, type, mediaFiles, reply_to, optimisticSender } = variables;
+      const cid = chatId != null ? String(chatId) : "";
+      if (!cid || !optimisticSender || (mediaFiles && mediaFiles.length > 0)) {
+        return {};
+      }
+
+      await queryClient.cancelQueries({ queryKey: ["messages", cid], exact: false });
+      const previousEntries = queryClient.getQueriesData({
+        queryKey: ["messages", cid],
+        exact: false,
+      });
+
+      const optimisticId = `optimistic:${Date.now()}`;
+      const optimisticMsg = {
+        _id: optimisticId,
+        _optimistic: true,
+        chat_id: cid,
+        sender: {
+          _id: optimisticSender._id,
+          username: optimisticSender.username,
+          profile: optimisticSender.profile || {},
+        },
+        content: (content || "").trim(),
+        type: type || "text",
+        media: [],
+        reply_to: reply_to
+          ? typeof reply_to === "object"
+            ? reply_to
+            : { _id: reply_to }
+          : null,
+        createdAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueriesData({ queryKey: ["messages", cid], exact: false }, (old) => {
+        if (!old?.data?.messages) return old;
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            messages: [...old.data.messages, optimisticMsg],
+          },
+        };
+      });
+
+      return { previousEntries, optimisticId, chatId: cid };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousEntries?.length) {
+        context.previousEntries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      userOnError?.(err, variables, context);
+    },
+    onSuccess: (apiResponse, variables, context) => {
+      const cid = variables?.chatId != null ? String(variables.chatId) : "";
+      const real = apiResponse?.data;
+      if (cid && real && context?.optimisticId) {
+        queryClient.setQueriesData({ queryKey: ["messages", cid], exact: false }, (old) => {
+          if (!old?.data?.messages) return old;
+          const rid = String(real._id ?? "");
+          const withoutTemp = old.data.messages.filter(
+            (m) => String(m._id) !== context.optimisticId,
+          );
+          const already = withoutTemp.some((m) => String(m._id) === rid);
+          const next = already ? withoutTemp : [...withoutTemp, { ...real, _optimistic: false }];
+          return {
+            ...old,
+            data: {
+              ...old.data,
+              messages: next,
+            },
+          };
+        });
+      } else if (cid) {
+        queryClient.invalidateQueries({ queryKey: ["messages", cid], exact: false });
+      }
       queryClient.invalidateQueries({ queryKey: ["chats"], exact: false });
+      userOnSuccess?.(apiResponse, variables, context);
     },
   });
 };
@@ -110,7 +201,7 @@ export const useUnreadMessageCount = (enabled = true) => {
     queryKey: ["unreadMessageCount"],
     queryFn: () =>
       apiClient.get("/chats/unread-count").then((res) => res.data),
-    refetchInterval: 30000, // poll every 30s
+    refetchInterval: 90000, // poll every 90s (reduces duplicate traffic vs 30s)
     enabled, // Only fetch if authenticated
   });
 };
@@ -856,7 +947,7 @@ export const useUnreadCount = (enabled = true) => {
     queryKey: ["unreadCount"],
     queryFn: () =>
       apiClient.get("/notifications/unreadCount").then((res) => res.data),
-    refetchInterval: 30000, // poll every 30s
+    refetchInterval: 90000, // poll every 90s (reduces duplicate traffic vs 30s)
     enabled, // Only fetch if authenticated
   });
 };
@@ -948,5 +1039,29 @@ export const useCreateGroup = (options = {}) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     }
+  });
+};
+
+/** POST /api/v1/users/logout */
+export const useLogout = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post("/users/logout").then((res) => res.data),
+    onSuccess: () => {
+      queryClient.clear();
+    },
+  });
+};
+
+/** POST /api/v1/users/deactive-user */
+export const useDeactivateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post("/users/deactive-user").then((res) => res.data),
+    onSuccess: () => {
+      queryClient.clear();
+    },
   });
 };

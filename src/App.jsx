@@ -18,6 +18,8 @@ import Signup         from "./pages/Signup";
 import VerifyEmail    from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import CompleteProfile from "./pages/CompleteProfile";
+import AccountActivation from "./pages/AccountActivation";
+import AccountVerification from "./pages/AccountVerification";
 
 // App Pages
 import Feed          from "./pages/Feed";
@@ -69,6 +71,15 @@ const App = () => {
       />
       <Route path="/verify-email"    element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/account-verification" element={<AccountVerification />} />
+      <Route
+        path="/account-activation"
+        element={
+          <ProtectedRoute>
+            <AccountActivation />
+          </ProtectedRoute>
+        }
+      />
 
       {/* ── First-time profile setup (protected, after verify) ── */}
       <Route

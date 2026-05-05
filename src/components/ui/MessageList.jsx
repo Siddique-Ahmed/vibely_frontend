@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef } from "react";
 import { ScrollArea } from "./scroll-area";
 import { MessageItem } from "./MessageItem";
 import { cn } from "../../lib/utils";
@@ -8,6 +8,7 @@ export function MessageList({
   userId,
   isLoading = false,
   isTyping = false,
+  typingLabel = "",
   onDeleteMessage,
   onReplyMessage,
   onEditMessage,
@@ -19,28 +20,28 @@ export function MessageList({
   const scrollRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Auto scroll to bottom when new messages arrive
-  const scrollToBottom = useCallback(() => {
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    const instant = last?._optimistic;
     if (scrollRef.current) {
       const scrollElement = scrollRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
+        "[data-radix-scroll-area-viewport]",
       );
       if (scrollElement) {
         scrollElement.scrollTo({
           top: scrollElement.scrollHeight,
-          behavior: "smooth",
+          behavior: instant ? "auto" : "smooth",
         });
       }
     }
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages]);
 
   return (
-    <ScrollArea ref={scrollRef} className="flex-1 min-h-0 bg-muted/5">
-      <div className="p-4 flex flex-col gap-2 max-w-5xl mx-auto">
+    <ScrollArea
+      ref={scrollRef}
+      className="flex-1 min-h-0 bg-gradient-to-b from-muted/20 to-background dark:from-muted/5"
+    >
+      <div className="mx-auto flex max-w-3xl flex-col gap-1.5 px-3 py-3 sm:gap-2 sm:px-4 sm:py-4 lg:max-w-4xl">
         {messages && messages.length > 0 ? (
           messages.map((msg) => (
             <MessageItem
@@ -62,29 +63,33 @@ export function MessageList({
             />
           ))
         ) : isLoading ? (
-          <div className="text-center text-sm text-muted-foreground py-8">
-            Loading messages...
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-purple-200 border-t-purple-600" />
+            Loading messages…
           </div>
         ) : (
-          <div className="text-center text-sm text-muted-foreground py-8">
-            No messages yet. Start the conversation!
+          <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-4 py-12 text-center text-sm text-muted-foreground">
+            <p className="font-medium text-foreground/80">No messages yet</p>
+            <p className="mt-1 text-xs">Send a message to start the conversation.</p>
           </div>
         )}
 
         {isTyping && (
-          <div className="text-[10px] text-muted-foreground italic animate-pulse flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-card/80 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm sm:text-sm">
             <span className="flex gap-1">
-              <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-purple-500" />
               <span
-                className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"
-                style={{ animationDelay: "0.1s" }}
+                className="h-1.5 w-1.5 animate-bounce rounded-full bg-purple-400"
+                style={{ animationDelay: "0.12s" }}
               />
               <span
-                className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"
-                style={{ animationDelay: "0.2s" }}
+                className="h-1.5 w-1.5 animate-bounce rounded-full bg-purple-300"
+                style={{ animationDelay: "0.24s" }}
               />
             </span>
-            Vibing...
+            <span className="font-medium text-foreground/85">
+              {typingLabel ? `${typingLabel} is typing…` : "Someone is typing…"}
+            </span>
           </div>
         )}
 

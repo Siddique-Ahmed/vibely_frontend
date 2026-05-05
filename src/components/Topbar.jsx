@@ -19,6 +19,7 @@ import {
   Settings,
   User,
 } from "lucide-react";
+import Avatar from "./Avatar";
 
 const Topbar = ({ onCreatePost }) => {
   const { user } = useSelector((state) => state.auth);
@@ -160,10 +161,12 @@ const Topbar = ({ onCreatePost }) => {
                     onClick={() => { setShowSearch(false); setSearchQuery(""); setSearchResults([]); }}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
                   >
-                    <img
-                      src={u.profile?.profile_picture || "/avatar.png"}
-                      alt={u.username}
-                      className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-600"
+                    <Avatar
+                      profilePicture={u.profile?.profile_picture}
+                      fullName={u.profile?.full_name}
+                      username={u.username}
+                      size="sm"
+                      className="border border-slate-200 dark:border-slate-600"
                     />
                     <div>
                       <p className="text-sm font-semibold text-slate-900 dark:text-white leading-none">
@@ -238,10 +241,12 @@ const Topbar = ({ onCreatePost }) => {
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-1.5 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition"
             >
-              <img
-                src={user?.profile?.profile_picture || "/avatar.png"}
-                alt={user?.username}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
+              <Avatar
+                profilePicture={user?.profile?.profile_picture}
+                fullName={user?.profile?.full_name}
+                username={user?.username}
+                size="sm"
+                className="w-7 h-7 sm:w-8 sm:h-8"
                 style={{ border: "2px solid transparent", boxShadow: "0 0 0 2px #EC4899" }}
               />
               <ChevronDown
@@ -336,7 +341,12 @@ const Topbar = ({ onCreatePost }) => {
                         onClick={() => { setMobileSearch(false); setShowSearch(false); setSearchQuery(""); setSearchResults([]); }}
                         className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
                       >
-                        <img src={u.profile?.profile_picture || "/avatar.png"} alt={u.username} className="w-8 h-8 rounded-full object-cover" />
+                        <Avatar
+                          profilePicture={u.profile?.profile_picture}
+                          fullName={u.profile?.full_name}
+                          username={u.username}
+                          size="sm"
+                        />
                         <div>
                           <p className="text-sm font-semibold dark:text-white">{u.username}</p>
                           <p className="text-xs text-slate-500">{u.profile?.full_name}</p>

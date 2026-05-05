@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
+import Avatar from "./Avatar";
 
 const reactions = [
   { name: "like", label: "Like", emoji: "👍" },
@@ -111,10 +112,11 @@ const CommentLikesModal = ({
                       className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition group"
                     >
                       <div className="relative flex-shrink-0">
-                        <img
-                          src={like.profile_picture || "/avatar.png"}
-                          alt={like.username}
-                          className="w-9 h-9 rounded-full object-cover"
+                        <Avatar
+                          profilePicture={like.profile_picture}
+                          fullName={like.full_name}
+                          username={like.username}
+                          size="md"
                         />
                         <span className="absolute -bottom-0.5 -right-0.5 text-sm leading-none">
                           {reactions.find((r) => r.name === like.reaction_type)

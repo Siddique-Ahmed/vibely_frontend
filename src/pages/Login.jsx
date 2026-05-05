@@ -64,14 +64,33 @@ const Login = () => {
         throw new Error("No user data received from profile endpoint");
       }
 
-      // Step 3: Navigate to feed
-      console.log("[Login] Redirecting to feed...");
-      navigate("/feed", { replace: true });
+      // Step 3: Check if account is active
+      if (!userData.is_active) {
+        console.log("[Login] Account not active, redirecting to activation...");
+        navigate("/account-activation", { replace: true });
+      } else {
+        // Step 4: Navigate to feed
+        console.log("[Login] Redirecting to feed...");
+        navigate("/feed", { replace: true });
+      }
 
     } catch (err) {
       console.error("[Login] Error:", err);
       const msg = err.response?.data?.message || err.message || "Login failed. Please try again.";
+      const status = err.response?.status;
+      
       console.error("[Login] Error message:", msg);
+      console.error("[Login] Error status:", status);
+
+      // Check if it's a verification error (is_verified = false)
+      if (status === 403 && msg.toLowerCase().includes("not verified")) {
+        console.log("[Login] Account not verified, redirecting to verification...");
+        // Store identifier for verification page
+        sessionStorage.setItem("verifyIdentifier", identifier);
+        navigate("/account-verification", { replace: true });
+        return;
+      }
+
       setErrorState(msg);
       dispatch(setError(msg));
       // Clear token if profile fetch fails

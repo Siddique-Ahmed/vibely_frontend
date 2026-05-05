@@ -12,6 +12,7 @@ import {
   Camera,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+import AvatarCustom from "../Avatar";
 import { Button } from "./button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "./input";
@@ -320,12 +321,13 @@ export function GroupMembersPanel({
               }}
             />
             <div className="relative z-[1] -mt-11">
-              <Avatar className="h-[4.75rem] w-[4.75rem] border-[3px] border-background shadow-lg ring-2 ring-purple-200/70 dark:ring-purple-900/60">
-                <AvatarImage src={chat.groupImage} />
-                <AvatarFallback className="text-lg font-bold">
-                  {(chat.groupName || "GP").substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <AvatarCustom
+                profilePicture={chat.groupImage}
+                fullName={chat.groupName}
+                username={chat.groupName}
+                size="xl"
+                className="h-[4.75rem] w-[4.75rem] border-[3px] border-background shadow-lg ring-2 ring-purple-200/70 dark:ring-purple-900/60"
+              />
               <Button
                 type="button"
                 variant="secondary"
@@ -382,12 +384,13 @@ export function GroupMembersPanel({
                   key={rid}
                   className="flex items-center gap-2 rounded-xl border border-border/50 bg-background/80 px-2 py-1.5"
                 >
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={ru?.profile?.profile_picture} />
-                    <AvatarFallback className="text-[10px]">
-                      {(ru?.username || "?").substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <AvatarCustom
+                    profilePicture={ru?.profile?.profile_picture}
+                    fullName={ru?.profile?.full_name}
+                    username={ru?.username}
+                    size="sm"
+                    className="h-8 w-8"
+                  />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {ru?.username || "User"}
                   </span>
@@ -443,12 +446,13 @@ export function GroupMembersPanel({
               key={uid}
               className="flex items-center gap-2 rounded-xl px-1 py-1.5 transition hover:bg-muted/50"
             >
-              <Avatar className="h-9 w-9 shrink-0">
-                <AvatarImage src={row.user?.profile?.profile_picture} />
-                <AvatarFallback className="text-xs">
-                  {(row.user?.username || "?").substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <AvatarCustom
+                profilePicture={row.user?.profile?.profile_picture}
+                fullName={row.user?.profile?.full_name}
+                username={row.user?.username}
+                size="md"
+                className="h-9 w-9 shrink-0"
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold leading-tight">
                   {row.user?.profile?.full_name || row.user?.username || "Member"}
@@ -696,12 +700,13 @@ function AddGroupMembersOverlay({
                           : "hover:bg-muted/70",
                       )}
                     >
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={p.profile?.profile_picture} />
-                        <AvatarFallback className="text-xs">
-                          {(p.username || "?").substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <AvatarCustom
+                        profilePicture={p.profile?.profile_picture}
+                        fullName={p.profile?.full_name}
+                        username={p.username}
+                        size="md"
+                        className="h-9 w-9"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold">{p.username}</p>
                         <p className="truncate text-xs text-muted-foreground">

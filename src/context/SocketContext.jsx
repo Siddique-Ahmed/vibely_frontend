@@ -5,6 +5,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { setNotifications, setUnreadCount, setUnreadMessageCount } from '../redux/slices/uiSlice';
 import { useUnreadCount, useUnreadMessageCount } from '../hooks/useApi';
 import { showToast } from '../components/Toast';
+import { getSocketChatId, getSocketSenderId } from '../utils/socketChatId';
+
+function getSocketBaseUrl() {
+    const api = import.meta.env.VITE_API_URL || '';
+    const marker = '/api/v1';
+    const i = api.indexOf(marker);
+    if (i !== -1) return api.slice(0, i).replace(/\/+$/, '') || window.location.origin;
+    return api.replace(/\/+$/, '') || window.location.origin;
+}
 
 export const SocketContext = createContext();
 
@@ -26,13 +35,13 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         if (user) {
             // Extract base URL from VITE_API_URL (e.g., http://localhost:9000 from http://localhost:9000/api/v1)
-            const serverUrl = import.meta.env.VITE_API_URL.split('/api/v1')[0];
+            const serverUrl = getSocketBaseUrl();
             console.log("🔌 Connecting socket to:", serverUrl);
             
             // Initialize socket connection
             const newSocket = io(serverUrl, {
                 query: {
-                    userId: user._id,
+                    userId: String(user._id),
                 },
                 reconnection: true,
                 reconnectionDelay: 1000,
@@ -44,7 +53,7 @@ export const SocketProvider = ({ children }) => {
 
             // Emit setup when connected
             newSocket.on("connect", () => {
-                newSocket.emit("setup", user._id);
+                newSocket.emit("setup", String(user._id));
                 console.log("✅ Socket connected and setup complete with ID:", newSocket.id);
             });
 
@@ -128,9 +137,9 @@ export const SocketProvider = ({ children }) => {
             newSocket.on("message received", (newMessage) => {
                 console.log("📩 Global message received:", newMessage);
 
-                const senderId = String(newMessage.sender?._id || newMessage.sender);
+                const senderId = getSocketSenderId(newMessage);
                 const userId = String(user?._id);
-                const messageChatId = String(newMessage.chat_id || newMessage.chat);
+                const messageChatId = getSocketChatId(newMessage);
                 
                 console.log(`🔍 Comparing IDs - Sender: ${senderId}, Me: ${userId}`);
                 
@@ -140,7 +149,10 @@ export const SocketProvider = ({ children }) => {
                 // 2. Don't increment if I am currently looking at this specific chat
                 const urlParams = new URLSearchParams(window.location.search);
                 const activeChatIdInUrl = urlParams.get('chatId'); 
-                const isCurrentlyViewingThisChat = window.location.pathname === '/messages' && activeChatIdInUrl === messageChatId;
+                const isCurrentlyViewingThisChat =
+                    window.location.pathname === '/messages' &&
+                    !!messageChatId &&
+                    String(activeChatIdInUrl || '') === String(messageChatId);
 
                 console.log(`🧐 Decision - isFromMe: ${isFromMe}, isViewing: ${isCurrentlyViewingThisChat}`);
 
@@ -162,12 +174,14 @@ export const SocketProvider = ({ children }) => {
                 // Invalidate relevant queries
                 queryClient.invalidateQueries({ queryKey: ['chats'] });
                 queryClient.invalidateQueries({ queryKey: ['unreadMessageCount'] });
-                queryClient.invalidateQueries({ queryKey: ['messages', messageChatId] });
+                if (messageChatId) {
+                    queryClient.invalidateQueries({ queryKey: ['messages', messageChatId] });
+                }
             });
 
             newSocket.on("message seen", (data) => {
                 console.log("👀 Message seen update:", data);
-                if (data.userId === user._id) {
+                if (String(data.userId) === String(user._id)) {
                     // If I am the one who saw it, my unread count should decrease
                     queryClient.invalidateQueries({ queryKey: ['unreadMessageCount'] });
                 }

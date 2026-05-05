@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearchUsersForMention } from "../hooks/useApi";
 import { Loader2, AtSign, Search, CheckCircle2 } from "lucide-react";
+import Avatar from "./Avatar";
 
 /**
  * Component to show user suggestions for mentions
@@ -54,10 +55,12 @@ const MentionSuggestions = ({ query, onSelect, placement = "bottom-full" }) => {
               >
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500 scale-y-0 group-hover:scale-y-100 transition-transform origin-center" />
                 <div className="relative">
-                  <img
-                    src={user.profile?.profile_picture || "/avatar.png"}
-                    alt={user.username}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-transparent group-hover:border-purple-200 dark:group-hover:border-purple-800 transition-all shadow-sm"
+                  <Avatar
+                    profilePicture={user.profile?.profile_picture}
+                    fullName={user.profile?.full_name}
+                    username={user.username}
+                    size="md"
+                    className="group-hover:border-purple-200 dark:group-hover:border-purple-800"
                   />
                   {user.is_online && (
                     <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full shadow-sm" />

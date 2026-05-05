@@ -10,6 +10,8 @@ import MainLayout from "../components/layouts/MainLayout";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import {
+  Trash2,
+  Trash,
   Heart,
   MessageCircle,
   UserPlus,
@@ -17,14 +19,8 @@ import {
   AtSign,
   Mail,
   FileText,
-  Bell,
-  BellOff,
-  Check,
-  CheckCheck,
-  Loader2,
-  Trash2,
-  Trash,
 } from "lucide-react";
+import Avatar from "../components/Avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -208,10 +204,12 @@ const Notifications = () => {
                   <div className="flex gap-3">
                     {/* Sender Avatar + Type Icon */}
                     <div className="relative flex-shrink-0">
-                      <img
-                        src={notif.sender?.profile?.profile_picture || "/avatar.png"}
-                        alt={notif.sender?.username}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-slate-800"
+                      <Avatar
+                        profilePicture={notif.sender?.profile?.profile_picture}
+                        fullName={notif.sender?.profile?.full_name}
+                        username={notif.sender?.username}
+                        size="md"
+                        className="w-12 h-12 border-2 border-white dark:border-slate-800"
                       />
                       <div
                         className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 ${iconConfig.bg}`}

@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Home, Search, Bell, User } from "lucide-react";
 
-const MainLayout = ({ children, sidebar, topbar }) => {
+const MainLayout = ({ children, sidebar, topbar, hideBottomNav = false }) => {
   const { user } = useSelector((state) => state.auth);
   const { isDarkMode, unreadCount } = useSelector((state) => state.ui);
 
@@ -33,7 +33,7 @@ const MainLayout = ({ children, sidebar, topbar }) => {
       </motion.div>
 
       {/* ── Main Content ── */}
-      <div className="flex-1 md:ml-64 pb-16 md:pb-0">
+      <div className={`flex-1 md:ml-64 ${hideBottomNav ? "pb-0" : "pb-16 md:pb-0"}`}>
         {/* Topbar */}
         <div
           className="sticky top-0 z-40"
@@ -62,6 +62,7 @@ const MainLayout = ({ children, sidebar, topbar }) => {
       </div>
 
       {/* ── Mobile Bottom Nav (Facebook/Instagram style) ── */}
+      {!hideBottomNav && (
       <motion.nav
         initial={{ y: 80 }}
         animate={{ y: 0 }}
@@ -151,6 +152,7 @@ const MainLayout = ({ children, sidebar, topbar }) => {
           ))}
         </div>
       </motion.nav>
+      )}
     </div>
   );
 };

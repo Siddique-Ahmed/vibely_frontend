@@ -3,17 +3,27 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toggleDarkMode } from "../redux/slices/uiSlice";
-import { setUser } from "../redux/slices/authSlice";
+import { setUser, logout } from "../redux/slices/authSlice";
 import apiClient from "../services/apiClient";
+import { useLogout, useDeactivateUser } from "../hooks/useApi";
 import MainLayout from "../components/layouts/MainLayout";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import {
-  Moon, Sun, Shield, Lock, Bell, UserX, Eye, EyeOff,
-  ChevronRight, Loader2, CheckCircle2, Globe, Users,
   MessageSquare, Trash2, AlertTriangle,
 } from "lucide-react";
+import Avatar from "../components/Avatar";
 import ChangePassword from "../components/ChangePassword";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 
 /* ── Reusable setting row ── */
 const SettingRow = ({ icon: Icon, label, description, children, danger }) => (
@@ -85,8 +95,11 @@ const Settings = () => {
   const [showBlocked,    setShowBlocked]    = useState(false);
   const [activeSection,  setActiveSection]  = useState("appearance");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
 
-  // Fetch notification preferences on mount
+  // Mutations
+  const { mutate: handleLogout, isPending: isLoggingOut } = useLogout();
+  const { mutate: handleDeactivate, isPending: isDeactivating } = useDeactivateUser();
   useEffect(() => {
     const fetchNotificationPreferences = async () => {
       setLoadingNotifications(true);
@@ -191,6 +204,40 @@ const Settings = () => {
       await apiClient.post(`/blocks/toggle/${userId}`);
       setBlockedUsers((prev) => prev.filter((u) => u._id !== userId));
     } catch (e) { console.error("Unblock error:", e); }
+  };
+
+  const onLogout = () => {
+    handleLogout(undefined, {
+      onSuccess: () => {
+        dispatch(logout());
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/login", { replace: true });
+      },
+      onError: (err) => {
+        console.error("Logout error:", err);
+        // Force logout anyway
+        dispatch(logout());
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/login", { replace: true });
+      },
+    });
+  };
+
+  const onDeactivate = () => {
+    handleDeactivate(undefined, {
+      onSuccess: () => {
+        dispatch(logout());
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/login", { replace: true });
+      },
+      onError: (err) => {
+        console.error("Deactivate error:", err);
+      },
+    });
+    setShowDeactivateConfirm(false);
   };
 
   return (
@@ -385,8 +432,13 @@ const Settings = () => {
                 ) : (
                   blockedUsers.map((u) => (
                     <div key={u._id} className="flex items-center gap-3 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
-                      <img src={u.profile?.profile_picture || "/avatar.png"} alt={u.username}
-                        className="w-10 h-10 rounded-full object-cover" />
+                      <Avatar
+                        profilePicture={u.profile?.profile_picture}
+                        fullName={u.profile?.full_name}
+                        username={u.username}
+                        size="sm"
+                        className="w-10 h-10"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{u.profile?.full_name || u.username}</p>
                         <p className="text-xs text-slate-500">@{u.username}</p>
@@ -414,14 +466,24 @@ const Settings = () => {
                 </SettingRow>
                 <SettingRow icon={EyeOff} label="Deactivate Account" description="Temporarily disable your account" danger>
                   <motion.button whileTap={{ scale: 0.95 }}
-                    className="text-xs px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition">
-                    Deactivate
+                    onClick={() => setShowDeactivateConfirm(true)}
+                    disabled={isDeactivating}
+                    className="text-xs px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition disabled:opacity-60">
+                    {isDeactivating ? "Deactivating..." : "Deactivate"}
                   </motion.button>
                 </SettingRow>
                 <SettingRow icon={Trash2} label="Delete Account" description="Permanently delete your account and all data" danger>
                   <motion.button whileTap={{ scale: 0.95 }}
                     className="text-xs px-3 py-1.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition">
                     Delete
+                  </motion.button>
+                </SettingRow>
+                <SettingRow icon={Lock} label="Logout" description="Sign out from your account">
+                  <motion.button whileTap={{ scale: 0.95 }}
+                    onClick={onLogout}
+                    disabled={isLoggingOut}
+                    className="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition disabled:opacity-60">
+                    {isLoggingOut ? "Logging out..." : "Logout"}
                   </motion.button>
                 </SettingRow>
               </Section>
@@ -436,6 +498,27 @@ const Settings = () => {
             <ChangePassword onBack={() => setIsChangingPassword(false)} />
           )}
         </AnimatePresence>
+
+        {/* ── DEACTIVATE CONFIRMATION MODAL ── */}
+        <AlertDialog open={showDeactivateConfirm} onOpenChange={setShowDeactivateConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Deactivate Your Account?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to deactivate your account? Your profile, posts, and messages will be hidden. You can reactivate your account anytime by logging in with your credentials.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeactivating}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={onDeactivate}
+                disabled={isDeactivating}
+                className="bg-red-600 hover:bg-red-700 text-white">
+                {isDeactivating ? "Deactivating..." : "Deactivate"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );

@@ -8,6 +8,7 @@ import {
   Camera, FileText, MapPin, Link2,
   ChevronRight, Loader2, SkipForward, CheckCircle2,
 } from "lucide-react";
+import Avatar from "../components/Avatar";
 
 const CompleteProfile = () => {
   const dispatch = useDispatch();
@@ -159,11 +160,13 @@ const CompleteProfile = () => {
                   boxShadow: "0 0 30px rgba(124,58,237,0.2)",
                 }}
               >
-                {preview ? (
-                  <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <Camera size={28} className="text-purple-400" />
-                )}
+                <Avatar
+                  profilePicture={preview}
+                  fullName={user?.profile?.full_name}
+                  username={user?.username}
+                  size="xl"
+                  className="w-full h-full"
+                />
               </div>
               <div
                 className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
