@@ -76,7 +76,7 @@ export const useSendMessage = (options = {}) => {
         .then((res) => res.data);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["messages", variables.chatId], exact: true });
+      queryClient.invalidateQueries({ queryKey: ["messages", variables.chatId], exact: false });
       queryClient.invalidateQueries({ queryKey: ["chats"], exact: false });
     },
   });
@@ -134,16 +134,17 @@ export const useSingleChat = (chatId) => {
 };
 
 /** POST /api/v1/chats/create-chat */
-export const useCreateChat = () => {
+export const useCreateChat = (options = {}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (recieverId) =>
       apiClient
         .post("/chats/create-chat", { recieverId })
         .then((res) => res.data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["chats"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["messages"], exact: false });
+      options.onSuccess?.(data);
     },
   });
 };

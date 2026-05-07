@@ -67,139 +67,134 @@ const ArchivedChats = () => {
   };
 
   return (
-    <MainLayout sidebar={<Sidebar />} topbar={<Topbar />}>
-      <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50/50 dark:bg-slate-950/20">
+    <MainLayout sidebar={<Sidebar />} topbar={<Topbar />} hideBottomNav={true}>
+      <div className="flex flex-col h-[calc(100vh-60px)] bg-slate-50/30 dark:bg-slate-950/20">
         {/* Header */}
-        <div className="px-6 py-8 border-b border-border/40 bg-background/60 backdrop-blur-md sticky top-0 z-10">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="px-4 md:px-6 py-3 md:py-8 border-b border-border/40 bg-background/60 backdrop-blur-md sticky top-0 z-10">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 md:gap-4 min-w-0">
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={() => navigate("/messages")}
-                className="rounded-full hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600 transition-colors"
+                className="h-9 w-9 md:h-11 md:w-11 rounded-full hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600 transition-colors"
               >
                 <ArrowLeft size={20} />
               </Button>
-              <div>
-                <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
-                  Archive <Badge variant="secondary" className="rounded-full bg-purple-100 text-purple-700 hover:bg-purple-100">{archivedChats.length}</Badge>
+              <div className="min-w-0">
+                <h1 className="text-lg md:text-3xl font-black tracking-tight flex items-center gap-2 md:gap-3 truncate">
+                  Archive <Badge variant="secondary" className="rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 border-none px-2 md:px-3 text-[10px] md:text-sm">{archivedChats.length}</Badge>
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1 font-medium">Conversations you've tucked away</p>
+                <p className="hidden md:block text-sm text-muted-foreground mt-1 font-medium">Conversations you've tucked away</p>
               </div>
             </div>
             
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-2xl border border-purple-100/50 dark:border-purple-900/30">
-              <Inbox size={16} className="text-purple-600" />
-              <span className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-widest">Archived Inbox</span>
+            <div className="hidden sm:flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-purple-50 dark:bg-purple-900/20 rounded-xl md:rounded-2xl border border-purple-100/50 dark:border-purple-900/30 shrink-0">
+              <Inbox size={14} className="text-purple-600 md:w-4 md:h-4" />
+              <span className="text-[9px] md:text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-widest">Archived</span>
             </div>
           </div>
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="max-w-5xl mx-auto p-6">
+          <div className="max-w-5xl mx-auto p-3 md:p-6">
             {isLoading ? (
-              <div className="grid gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-24 bg-muted animate-pulse rounded-3xl" />
+              <div className="grid gap-3 md:gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-20 md:h-24 bg-muted/40 animate-pulse rounded-2xl md:rounded-3xl" />
                 ))}
               </div>
             ) : archivedChats.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-32 text-center">
-                <div className="w-24 h-24 bg-purple-50 dark:bg-purple-900/10 rounded-full flex items-center justify-center mb-6">
-                  <Archive size={40} className="text-purple-200 dark:text-purple-800" />
+              <div className="flex flex-col items-center justify-center py-20 md:py-32 text-center px-4">
+                <div className="w-20 h-20 md:w-24 md:h-24 bg-purple-50 dark:bg-purple-900/10 rounded-full flex items-center justify-center mb-6">
+                  <Archive size={32} className="text-purple-300 dark:text-purple-700" />
                 </div>
-                <h3 className="text-xl font-bold">No archived chats</h3>
-                <p className="text-muted-foreground mt-2 max-w-xs">Your archive is currently empty. Any chats you archive will appear here.</p>
+                <h3 className="text-lg md:text-xl font-bold">No archived chats</h3>
+                <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">Your archive is currently empty. Any chats you archive will appear here.</p>
                 <Button 
                   onClick={() => navigate("/messages")} 
                   variant="outline" 
-                  className="mt-8 rounded-full border-purple-200 hover:bg-purple-50"
+                  className="mt-8 rounded-full border-purple-200 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                 >
                   Return to Messages
                 </Button>
               </div>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-3 md:gap-4">
                 {archivedChats.map((chat) => (
                   <div 
                     key={chat._id}
-                    className="group bg-background hover:bg-slate-50 dark:hover:bg-slate-900/40 border border-border/40 rounded-3xl p-5 flex items-center gap-5 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-0.5"
+                    onClick={() => navigate(`/messages?chatId=${chat._id}`)}
+                    className="group relative bg-background hover:bg-slate-50 dark:hover:bg-slate-900/40 border border-border/40 rounded-2xl md:rounded-3xl p-3 md:p-5 flex items-center gap-3 md:gap-5 transition-all duration-300 hover:shadow-lg dark:hover:shadow-purple-500/5 cursor-pointer"
                   >
-                    <div className="relative">
+                    <div className="relative shrink-0">
                       <AvatarCustom
                         profilePicture={getChatAvatar(chat)}
                         fullName={getChatTitle(chat)}
                         username={getChatTitle(chat)}
                         size="lg"
-                        className="h-16 w-16 border-2 border-white dark:border-slate-800 shadow-sm"
+                        className="h-12 w-12 md:h-16 md:w-16 border-2 border-white dark:border-slate-800 shadow-sm"
                       />
                       {chat.isGroup && (
                         <div className="absolute -bottom-1 -right-1 bg-purple-600 text-white p-1 rounded-lg border-2 border-background">
-                          <MessageSquare size={12} />
+                          <MessageSquare size={10} className="md:w-3 md:h-3" />
                         </div>
                       )}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-lg truncate group-hover:text-purple-600 transition-colors">
+                        <h3 className="font-bold text-sm md:text-lg truncate group-hover:text-purple-600 transition-colors">
                           {getChatTitle(chat)}
                         </h3>
-                        {chat.isGroup && <Badge variant="outline" className="text-[9px] uppercase tracking-tighter py-0">Group</Badge>}
+                        {chat.isGroup && <Badge variant="outline" className="text-[8px] md:text-[9px] uppercase tracking-tighter py-0 px-1">Group</Badge>}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
-                        <p className="truncate flex-1 italic opacity-80">
-                          {chat.lastMessage?.content || "No messages yet"}
-                        </p>
-                        <div className="flex items-center gap-1 shrink-0 text-[10px] uppercase tracking-widest opacity-60">
-                           <Clock size={12} />
-                           {new Date(chat.updatedAt).toLocaleDateString()}
-                        </div>
+                      <p className="text-[11px] md:text-sm text-muted-foreground italic opacity-70 truncate mb-1">
+                        {chat.lastMessage?.content || "No messages yet"}
+                      </p>
+                      <div className="flex items-center gap-1 text-[9px] md:text-[10px] uppercase tracking-widest text-muted-foreground opacity-50">
+                         <Clock size={10} className="md:w-3 md:h-3" />
+                         {new Date(chat.updatedAt).toLocaleDateString()}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
+                    {/* Actions */}
+                    <div 
+                      className="flex items-center gap-1 md:gap-2 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 md:translate-x-4 md:group-hover:translate-x-0 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={(e) => { e.stopPropagation(); handleUnarchive(chat._id); }}
-                        className="rounded-2xl bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white"
+                        onClick={() => handleUnarchive(chat._id)}
+                        className="h-8 w-8 md:h-10 md:w-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 hover:bg-purple-600 hover:text-white transition-all shadow-sm"
                         title="Unarchive"
                       >
-                        <Inbox size={18} />
+                        <Inbox size={15} className="md:w-[18px] md:h-[18px]" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="rounded-2xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white"
+                        className="h-8 w-8 md:h-10 md:w-10 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
                         title="Delete"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!window.confirm("Delete this chat from your account?")) return;
+                        onClick={() => {
+                          if (!window.confirm("Delete this chat permanently?")) return;
                           deleteMutation.mutate(chat._id, {
-                            onSuccess: (res) => {
+                            onSuccess: () => {
                               queryClient.invalidateQueries({ queryKey: ["archivedChats"] });
                               queryClient.invalidateQueries({ queryKey: ["chats"] });
-                              showToast({
-                                message: res?.message || "Chat deleted",
-                                type: "success",
-                              });
+                              showToast({ message: "Chat deleted", type: "success" });
                             },
-                            onError: (e) =>
-                              showToast({
-                                message: getChatActionError(e),
-                                type: "error",
-                              }),
+                            onError: (e) => showToast({ message: getChatActionError(e), type: "error" }),
                           });
                         }}
                         disabled={deleteMutation.isPending}
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={15} className="md:w-[18px] md:h-[18px]" />
                       </Button>
                       <Button 
+                        className="hidden md:flex rounded-xl bg-purple-600 text-white hover:bg-purple-700 px-6 font-bold text-sm h-10"
                         onClick={() => navigate(`/messages?chatId=${chat._id}`)}
-                        className="rounded-2xl bg-purple-600 text-white hover:bg-purple-700 px-6 font-bold"
                       >
                         Open
                       </Button>

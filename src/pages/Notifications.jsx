@@ -63,7 +63,7 @@ const Notifications = () => {
   });
   const { mutate: deleteNotification } = useDeleteNotification();
   const { mutate: clearAllNotifications } = useClearAllNotifications();
-  const { socket } = useSocket();
+  const {socket} = useSocket();
 
   // Get notifications from API
   const apiNotifications = notificationsData?.data?.notifications || [];

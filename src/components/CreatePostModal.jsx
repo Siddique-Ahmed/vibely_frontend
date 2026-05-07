@@ -197,7 +197,7 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={handleClose}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[65] flex items-end sm:items-center justify-center p-0 sm:p-4"
         >
           <motion.div
             initial={{ y: 100, opacity: 0 }}
@@ -259,8 +259,8 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
                 />
                 <AnimatePresence>
                   {showMentions && (
-                    <div className="absolute top-full left-5 right-5 z-50">
-                      <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} placement="top-full" />
+                    <div className="absolute top-full left-0 z-[1000] mt-1">
+                      <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} placement="bottom-full" />
                     </div>
                   )}
                 </AnimatePresence>
@@ -380,7 +380,7 @@ const CreatePostModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
 
             {/* Bottom Toolbar */}
-            <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-3 flex items-center gap-3 shrink-0 bg-white dark:bg-slate-900">
+            <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-3 flex items-center gap-3 shrink-0 bg-white dark:bg-slate-900 relative z-0">
               {/* Visibility Selector */}
               <div className="relative">
                 <motion.button

@@ -169,7 +169,7 @@ const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={handleClose}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[64] flex items-end sm:items-center justify-center p-0 sm:p-4"
         >
           <motion.div
             initial={{ y: 100, opacity: 0 }}
@@ -222,7 +222,7 @@ const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
               </div>
 
               {/* Caption */}
-              <div className="px-5 pb-3">
+              <div className="px-5 pb-3 relative">
                 <textarea
                   placeholder="What's on your mind?"
                   value={caption}
@@ -234,8 +234,8 @@ const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
                 />
                 <AnimatePresence>
                   {showMentions && (
-                    <div className="relative">
-                      <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} />
+                    <div className="absolute top-full left-0 z-[1000] mt-1">
+                      <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} placement="bottom-full" />
                     </div>
                   )}
                 </AnimatePresence>
@@ -346,7 +346,7 @@ const EditPostModal = ({ isOpen, onClose, post, onSuccess }) => {
             </div>
 
             {/* Bottom Toolbar */}
-            <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-3 flex items-center gap-3 shrink-0 bg-white dark:bg-slate-900">
+            <div className="border-t border-slate-200 dark:border-slate-800 px-5 py-3 flex items-center gap-3 shrink-0 bg-white dark:bg-slate-900 relative z-0">
               {/* Visibility Selector */}
               <div className="relative">
                 <motion.button

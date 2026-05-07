@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Pin } from "lucide-react";
+import { Pin, CornerUpRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 import MessageContextMenu from "./MessageContextMenu";
 import { cn } from "../../lib/utils";
@@ -22,9 +22,7 @@ function truncate(text, max = 120) {
 function ReplyPreview({ replyTo, isOwn }) {
   if (!replyTo || typeof replyTo === "string") return null;
   const senderLabel =
-    replyTo.sender?.username ||
-    replyTo.sender?.profile?.full_name ||
-    "User";
+    replyTo.sender?.username || replyTo.sender?.profile?.full_name || "User";
   const preview = replyTo.deleted_for_everyone
     ? "Message deleted"
     : truncate(replyTo.content || "") ||
@@ -57,9 +55,7 @@ export function MessageItem({
   onMediaClick,
 }) {
   const senderName =
-    message.sender?.username ||
-    message.sender?.profile?.full_name ||
-    "User";
+    message.sender?.username || message.sender?.profile?.full_name || "User";
 
   const formattedTime = message.createdAt
     ? new Date(message.createdAt).toLocaleTimeString([], {
@@ -97,19 +93,30 @@ export function MessageItem({
     <div
       data-message-id={message._id}
       className={cn(
-        "relative px-4 py-3 rounded-2xl transition-all duration-300",
+        "relative px-3.5 py-2 md:px-4 md:py-3 rounded-[1.25rem] transition-all duration-300 shadow-sm",
         isOwn
-          ? "bg-purple-600 text-white rounded-tr-none shadow-lg shadow-purple-500/20"
-          : "bg-background dark:bg-slate-900 border border-border/40 text-slate-900 dark:text-slate-100 rounded-tl-none shadow-sm",
+          ? "bg-linear-to-br from-purple-600 to-indigo-600 text-white rounded-tr-none"
+          : "bg-white dark:bg-slate-900 border border-border/40 text-slate-900 dark:text-slate-100 rounded-tl-none",
         message.deleted_for_everyone &&
           "bg-muted text-muted-foreground dark:bg-muted/80 border-transparent shadow-none italic",
       )}
     >
+      {message.is_forwarded && !message.deleted_for_everyone && (
+        <div
+          className={cn(
+            "mb-1 flex items-center gap-1.5 text-[10px] italic opacity-80",
+            isOwn ? "text-white/90" : "text-muted-foreground",
+          )}
+        >
+          <CornerUpRight className="h-3 w-3" aria-hidden /> Forwarded
+        </div>
+      )}
+
       {message.is_pinned && !message.deleted_for_everyone && (
         <div
           className={cn(
-            "mb-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider",
-            isOwn ? "text-white/80" : "text-muted-foreground",
+            "mb-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider",
+            isOwn ? "text-white/80" : "text-purple-600 dark:text-purple-400",
           )}
         >
           <Pin className="h-3 w-3" aria-hidden /> Pinned
@@ -121,19 +128,21 @@ export function MessageItem({
       )}
 
       {message.deleted_for_everyone ? (
-        <p className="text-sm">This message was deleted</p>
+        <p className="text-[13px] md:text-sm">This message was deleted</p>
       ) : (
         <>
           {!!message.content?.trim() && (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            <p className="text-[13px] md:text-sm leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </p>
           )}
           {hasMedia && (
             <div
               className={cn(
-                "grid gap-2",
-                (message.media?.length || 0) > 1 ? "grid-cols-2" : "grid-cols-1",
+                "grid gap-1.5",
+                (message.media?.length || 0) > 1
+                  ? "grid-cols-2"
+                  : "grid-cols-1",
                 message.content?.trim() ? "mt-2" : "",
               )}
             >
@@ -142,7 +151,7 @@ export function MessageItem({
                   <button
                     type="button"
                     key={item.url_public_id || item.url}
-                    className="relative w-full overflow-hidden rounded-xl bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+                    className="relative w-full overflow-hidden rounded-xl bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 aspect-square sm:aspect-auto"
                     onClick={() =>
                       onMediaClick?.({
                         ...item,
@@ -157,7 +166,7 @@ export function MessageItem({
                       playsInline
                     />
                     <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30">
-                      <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900">
+                      <span className="rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold text-slate-900">
                         Play video
                       </span>
                     </span>
@@ -166,7 +175,7 @@ export function MessageItem({
                   <button
                     type="button"
                     key={item.url_public_id || item.url}
-                    className="overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+                    className="overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 aspect-square sm:aspect-auto"
                     onClick={() =>
                       onMediaClick?.({
                         ...item,
@@ -189,14 +198,14 @@ export function MessageItem({
 
       <div
         className={cn(
-          "mt-2 flex flex-wrap items-center justify-end gap-2 text-[10px]",
+          "mt-1 flex items-center justify-end gap-1.5 text-[9px] md:text-[10px]",
           isOwn && !message.deleted_for_everyone
-            ? "text-white/70"
-            : "text-muted-foreground",
+            ? "text-white/60"
+            : "text-muted-foreground/60",
         )}
       >
         {message.is_edited && !message.deleted_for_everyone && (
-          <span className="mr-auto opacity-80">Edited</span>
+          <span className="opacity-80">edited</span>
         )}
         <span>{formattedTime}</span>
       </div>
@@ -204,16 +213,19 @@ export function MessageItem({
       {reactionSummary.length > 0 && !message.deleted_for_everyone && (
         <div
           className={cn(
-            "pointer-events-none absolute -bottom-2 flex flex-wrap gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-sm",
+            "pointer-events-none absolute -bottom-2.5 flex flex-wrap gap-1 rounded-full border px-1.5 py-0.5 text-[10px] md:text-[11px] shadow-md z-10",
             isOwn
-              ? "-left-1 border-purple-200 bg-white dark:border-border dark:bg-slate-800"
-              : "right-2 border-border bg-card",
+              ? "-left-1 border-purple-100 bg-white dark:border-slate-800 dark:bg-slate-800"
+              : "right-2 border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900",
           )}
         >
           {reactionSummary.map(({ reaction, emoji, count }) => (
-            <span key={reaction} className="font-medium tabular-nums">
-              {emoji}
-              {count > 1 ? ` ${count}` : ""}
+            <span
+              key={reaction}
+              className="font-medium tabular-nums flex items-center gap-0.5"
+            >
+              <span>{emoji}</span>
+              {count > 1 && <span className="opacity-70">{count}</span>}
             </span>
           ))}
         </div>
@@ -224,16 +236,17 @@ export function MessageItem({
   return (
     <div
       className={cn(
-        "group flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300",
-        reactionSummary.length > 0 ? "mb-5" : "mb-3",
+        "group flex gap-2 md:gap-3 animate-in fade-in slide-in-from-bottom-1 duration-300",
+        reactionSummary.length > 0 ? "mb-6" : "mb-3.5",
         isOwn ? "justify-end" : "justify-start",
+        "min-w-0",
       )}
     >
       {!isOwn && (
-        <div className="mb-1 shrink-0 self-end">
-          <Avatar className="h-8 w-8 border border-border/50">
+        <div className="mb-0.5 shrink-0 self-end">
+          <Avatar className="h-7 w-7 md:h-8 md:w-8 border border-border/50 flex-shrink-0">
             <AvatarImage src={message.sender?.profile?.profile_picture} />
-            <AvatarFallback className="bg-purple-100 text-purple-700 text-[10px]">
+            <AvatarFallback className="bg-purple-100 text-purple-700 text-[10px] font-bold">
               {senderName.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -242,37 +255,38 @@ export function MessageItem({
 
       <div
         className={cn(
-          "flex max-w-[88%] flex-col gap-1 sm:max-w-[72%]",
+          "flex flex-col gap-0.5 min-w-0",
           isOwn ? "items-end" : "items-start",
         )}
       >
         {!isOwn && (
-          <span className="px-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="px-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 truncate">
             {senderName}
           </span>
         )}
 
         <div
           className={cn(
-            "flex items-end gap-2",
+            "flex items-center gap-1 min-w-0",
             isOwn ? "flex-row-reverse" : "flex-row",
           )}
         >
-          <MessageContextMenu
-            messageId={message._id}
-            messageContent={copyText}
-            isOwnMessage={isOwn}
-            isPinned={message.is_pinned}
-            onEdit={onEdit}
-            onReply={onReply}
-            onReact={onReact}
-            onPin={onPin}
-            onUnpin={onPin}
-            onDeleteForMe={() => onDelete?.(false)}
-            onDeleteForEveryone={() => onDelete?.(true)}
-            onForward={onForward}
-            className="opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-          />
+          <div className="shrink-0 md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100 transition-all duration-200">
+            <MessageContextMenu
+              messageId={message._id}
+              messageContent={copyText}
+              isOwnMessage={isOwn}
+              isPinned={message.is_pinned}
+              onEdit={onEdit}
+              onReply={onReply}
+              onReact={onReact}
+              onPin={onPin}
+              onUnpin={onPin}
+              onDeleteForMe={() => onDelete?.(false)}
+              onDeleteForEveryone={() => onDelete?.(true)}
+              onForward={onForward}
+            />
+          </div>
           {bubble}
         </div>
       </div>

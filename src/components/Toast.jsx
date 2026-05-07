@@ -22,6 +22,7 @@ const ICONS = {
   error: "✕",
   warning: "!",
   info: "i",
+  message: "✉",
 };
 
 const LABELS = {
@@ -35,6 +36,7 @@ const LABELS = {
   error: "Error",
   warning: "Warning",
   info: "Info",
+  message: "New message",
 };
 
 // ─── Variant styles (left accent + icon bg) ──────────────────────────────────
@@ -54,6 +56,10 @@ const VARIANTS = {
   info: {
     accent: "before:bg-blue-700",
     iconBg: "bg-blue-50 text-blue-700",
+  },
+  message: {
+    accent: "before:bg-cyan-600",
+    iconBg: "bg-cyan-50 text-cyan-700",
   },
   like: {
     accent: "before:bg-pink-700",
@@ -82,7 +88,7 @@ const VARIANTS = {
 };
 
 // ─── Single Toast Item ────────────────────────────────────────────────────────
-const VibelyToast = ({ id, message, type = "info", sender, duration = 4000, onClose }) => {
+const VibelyToast = ({ id, message, type = "info", sender, duration = 4000, onClose, onClick }) => {
   const variant = VARIANTS[type] || VARIANTS.info;
   const hasSender = sender?.username;
   const initials = hasSender ? sender.username.charAt(0).toUpperCase() : "?";
@@ -94,10 +100,18 @@ const VibelyToast = ({ id, message, type = "info", sender, duration = 4000, onCl
     return () => clearTimeout(timer);
   }, [duration, onClose]);
 
+  const handleClick = (e) => {
+    // Don't trigger if clicking the close button
+    if (e.target.closest('button[data-radix-collection-item]')) return;
+    if (onClick) onClick();
+    onClose();
+  };
+
   return (
     <Toast
+      onClick={handleClick}
       className={cn(
-        "relative overflow-hidden flex items-start gap-3 p-4 pr-10",
+        "relative overflow-hidden flex items-start gap-3 p-4 pr-10 cursor-pointer",
         "bg-white dark:bg-zinc-900",
         "border border-zinc-200 dark:border-zinc-800",
         "rounded-xl shadow-lg",
@@ -208,15 +222,15 @@ export const ToastContainer = () => {
           onClose={() => remove(toast.id)}
         />
       ))}
-      <ToastViewport className="fixed bottom-6 right-6 flex flex-col-reverse gap-2 w-[360px] z-[100]" />
+      <ToastViewport className="fixed bottom-6 right-6 flex flex-col-reverse gap-2 w-[360px] z-[99]" />
     </ToastProvider>
   );
 };
 
-export const showToast = ({ message = "", type = "info", duration = 4000, sender, notificationType } = {}) => {
+export const showToast = ({ message = "", type = "info", duration = 4000, sender, notificationType, onClick } = {}) => {
   window.dispatchEvent(
     new CustomEvent("show-toast", {
-      detail: { message, type: notificationType || type, duration, sender },
+      detail: { message, type: notificationType || type, duration, sender, onClick },
     })
   );
 };

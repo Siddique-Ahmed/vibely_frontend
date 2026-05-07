@@ -33,7 +33,7 @@ const MainLayout = ({ children, sidebar, topbar, hideBottomNav = false }) => {
       </motion.div>
 
       {/* ── Main Content ── */}
-      <div className={`flex-1 md:ml-64 ${hideBottomNav ? "pb-0" : "pb-16 md:pb-0"}`}>
+      <div className={`flex-1 min-w-0 md:ml-64 ${hideBottomNav ? "pb-0" : "pb-16 md:pb-0"}`}>
         {/* Topbar */}
         <div
           className="sticky top-0 z-40"

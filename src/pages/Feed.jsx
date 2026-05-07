@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import {
-  usePosts, useFeedPosts, useToggleLike, useSharePost,
+  usePosts, useFeedPosts, useToggleLike,
 } from "../hooks/useApi";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../services/apiClient";
@@ -52,7 +52,6 @@ const Feed = () => {
   const followerQuery  = useFollowerPosts(page, 10);
 
   const { mutate: toggleLike } = useToggleLike();
-  const { mutate: sharePost }  = useSharePost();
 
   // Pick active query
   const activeQuery =
@@ -83,9 +82,8 @@ const Feed = () => {
     toggleLike({ targetId: postId, targetType: "Post", reactionType: "like" });
 
   const handleShare = (postId) => {
-    // Call API to increment share counter
-    sharePost(postId);
-    // Also copy link to clipboard
+    // This is now mostly a fallback since PostCard handles it
+    // But keeping it in case share button is called from Feed directly
     const url = `${window.location.origin}/post/${postId}`;
     if (navigator.share) {
       navigator.share({ url }).catch(() => navigator.clipboard.writeText(url));

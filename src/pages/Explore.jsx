@@ -183,21 +183,21 @@ const Explore = () => {
                   {/* Own profile → Edit Profile button */}
                   {isSelf ? (
                     <Link to="/settings"
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-medium text-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition ml-3 flex-shrink-0">
-                      <Edit3 size={14} /> Edit Profile
+                      className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-medium text-xs sm:text-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition ml-2 sm:ml-3 flex-shrink-0">
+                      <Edit3 size={14} /> <span className="hidden xs:inline">Edit Profile</span>
                     </Link>
                   ) : (
                     <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                       onClick={() => handleFollowToggle(u._id)}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-medium text-sm transition ml-3 flex-shrink-0 ${
+                      className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-medium text-xs sm:text-sm transition ml-2 sm:ml-3 flex-shrink-0 ${
                         isFollowing
                           ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700"
                           : "text-white"
                       }`}
                       style={!isFollowing ? { background: "linear-gradient(135deg,#7C3AED,#EC4899)", boxShadow: "0 4px 14px rgba(124,58,237,0.35)" } : {}}>
                       {isFollowing
-                        ? <><UserCheck size={14} strokeWidth={2.5} /> Following</>
-                        : <><UserPlus  size={14} strokeWidth={2.5} /> Follow</>}
+                        ? <><UserCheck size={14} strokeWidth={2.5} /> <span className="hidden xs:inline">Following</span></>
+                        : <><UserPlus  size={14} strokeWidth={2.5} /> <span className="hidden xs:inline">Follow</span></>}
                     </motion.button>
                   )}
                 </motion.div>

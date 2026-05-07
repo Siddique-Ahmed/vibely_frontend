@@ -219,8 +219,8 @@ export default function ChatDetail() {
   }
 
   return (
-    <MainLayout sidebar={<Sidebar />} topbar={<Topbar />}>
-      <div className="flex min-h-[calc(100vh-130px)] flex-col bg-muted/15 md:min-h-[calc(100vh-90px)]">
+    <MainLayout sidebar={<Sidebar />} topbar={<Topbar />} hideBottomNav={true}>
+      <div className="flex min-h-[calc(100vh-60px)] flex-col bg-muted/15 md:min-h-[calc(100vh-60px)]">
         <div className="sticky top-0 z-10 border-b border-border/40 bg-background/90 backdrop-blur-md">
           <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-5 md:px-6">
             <Button

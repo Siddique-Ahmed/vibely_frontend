@@ -42,7 +42,7 @@ export const MessageContextMenu = ({
           variant="ghost"
           size="sm"
           className={cn(
-            "h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted/80",
+            "h-8 w-8 p-0 hover:bg-muted/80",
             className
           )}
           disabled={isLoading}
@@ -51,7 +51,7 @@ export const MessageContextMenu = ({
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-48 z-90">
         <DropdownMenuLabel className="text-xs text-muted-foreground">
           Message Options
         </DropdownMenuLabel>

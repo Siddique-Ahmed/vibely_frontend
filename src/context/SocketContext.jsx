@@ -19,6 +19,7 @@ export const SocketContext = createContext();
 
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
+    const [isConnected, setIsConnected] = useState(false);
     const [onlineUsers, setOnlineUsers] = useState([]);
     const { user } = useSelector((state) => state.auth);
     const dispatch = useDispatch();
@@ -36,7 +37,7 @@ export const SocketProvider = ({ children }) => {
         if (user) {
             // Extract base URL from VITE_API_URL (e.g., http://localhost:9000 from http://localhost:9000/api/v1)
             const serverUrl = getSocketBaseUrl();
-            console.log("🔌 Connecting socket to:", serverUrl);
+            console.log("🔌 Initializing socket connection to:", serverUrl);
             
             // Initialize socket connection
             const newSocket = io(serverUrl, {
@@ -49,21 +50,25 @@ export const SocketProvider = ({ children }) => {
                 reconnectionAttempts: 5,
             });
 
+            console.log("🔌 Socket instance created, waiting for connection...");
             setSocket(newSocket);
 
             // Emit setup when connected
             newSocket.on("connect", () => {
                 newSocket.emit("setup", String(user._id));
-                console.log("✅ Socket connected and setup complete with ID:", newSocket.id);
+                setIsConnected(true);
+                console.log("✅ Socket READY - Connected with ID:", newSocket.id);
             });
 
             // Socket connection errors
             newSocket.on("connect_error", (error) => {
                 console.error("❌ Socket connection error:", error);
+                setIsConnected(false);
             });
 
             newSocket.on("disconnect", (reason) => {
                 console.log("❌ Socket disconnected:", reason);
+                setIsConnected(false);
             });
 
             // DEBUG: Listen to all socket events
@@ -82,12 +87,13 @@ export const SocketProvider = ({ children }) => {
              * Handle real-time notifications
              * When a post is liked, commented on, replied to, or someone follows
              */
+            // Notification Received
             newSocket.on("notification received", (newNotification) => {
-                console.log("🔔 New notification:", newNotification);
+                console.log("🔔 [Socket] New notification received:", newNotification);
                 
-                // Build notification message based on type
-                let toastMessage = '';
                 const sender = newNotification.sender;
+                let toastMessage = '';
+                let toastIcon = null;
 
                 switch (newNotification.type) {
                     case 'like':
@@ -96,57 +102,57 @@ export const SocketProvider = ({ children }) => {
                     case 'comment':
                         toastMessage = 'commented on your post';
                         break;
-                    case 'reply':
-                        toastMessage = 'replied to your comment';
-                        break;
                     case 'follow':
                         toastMessage = 'started following you';
                         break;
                     case 'mention':
-                        toastMessage = 'mentioned you';
+                        toastMessage = 'mentioned you in a post';
                         break;
                     case 'post':
-                        toastMessage = 'posted something new';
+                        toastMessage = 'posted a new update';
+                        break;
+                    case 'message':
+                        toastMessage = 'sent you a message';
                         break;
                     default:
-                        toastMessage = 'sent you a notification';
+                        toastMessage = newNotification.message || 'New notification';
                 }
 
-                // Show professional toast notification with profile picture
+                // Show Toast
                 showToast({
+                    title: sender?.username || 'Vibely',
                     message: toastMessage,
-                    type: newNotification.type,
-                    duration: 5000,
+                    type: newNotification.type || 'info', // Fallback to info if variant doesn't exist
                     sender: sender,
-                    notificationType: newNotification.type,
+                    duration: 5000,
+                    onClick: () => {
+                        if (newNotification.type === 'message') {
+                            window.location.href = `/messages?chatId=${newNotification.chat}`;
+                        } else {
+                            window.location.href = '/notifications';
+                        }
+                    }
                 });
 
-                // Update Redux state with new notification
-                dispatch(setNotifications([newNotification]));
-                
-                // Increment unread count in Redux using a functional update
-                dispatch(setUnreadCount((prevCount) => prevCount + 1));
-
+                // Invalidate notification queries
                 queryClient.invalidateQueries({ queryKey: ['notifications'], exact: false });
                 queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+                
+                // If it's a message type notification (rarely used via this channel), update chats too
+                if (newNotification.type === 'message') {
+                    queryClient.refetchQueries({ queryKey: ['chats'] });
+                }
             });
 
-            /**
-             * Handle real-time messages globally
-             */
+            // Chat/Message Real-time updates
             newSocket.on("message received", (newMessage) => {
-                console.log("📩 Global message received:", newMessage);
-
-                const senderId = getSocketSenderId(newMessage);
+                console.log("💬 [Socket] Message received:", newMessage);
+                
                 const userId = String(user?._id);
-                const messageChatId = getSocketChatId(newMessage);
-                
-                console.log(`🔍 Comparing IDs - Sender: ${senderId}, Me: ${userId}`);
-                
-                // 1. Don't increment if I am the sender
-                const isFromMe = senderId === userId;
-                
-                // 2. Don't increment if I am currently looking at this specific chat
+                const senderId = newMessage.sender?._id || newMessage.sender;
+                const messageChatId = newMessage.chat?._id || newMessage.chat;
+                const isFromMe = String(senderId) === userId;
+
                 const urlParams = new URLSearchParams(window.location.search);
                 const activeChatIdInUrl = urlParams.get('chatId'); 
                 const isCurrentlyViewingThisChat =
@@ -163,19 +169,54 @@ export const SocketProvider = ({ children }) => {
                     // Show toast if not on messages page
                     if (window.location.pathname !== '/messages') {
                         showToast({
-                            message: `New message from ${newMessage.sender?.username || 'someone'}`,
+                            title: newMessage.sender?.username || 'New Message',
+                            message: newMessage.content || 'Sent an attachment',
                             type: 'message',
-                            duration: 4000,
+                            duration: 5000,
                             sender: newMessage.sender,
+                            onClick: () => {
+                                window.location.href = `/messages?chatId=${messageChatId}`;
+                            }
                         });
                     }
                 }
 
-                // Invalidate relevant queries
+                // CRITICAL: Refetch/Invalidate chats and messages to ensure real-time UI updates
                 queryClient.invalidateQueries({ queryKey: ['chats'] });
                 queryClient.invalidateQueries({ queryKey: ['unreadMessageCount'] });
+                
                 if (messageChatId) {
-                    queryClient.invalidateQueries({ queryKey: ['messages', messageChatId] });
+                    // Update the specific message list if we are in that chat
+                    queryClient.invalidateQueries({ queryKey: ['messages', messageChatId], exact: false });
+                }
+            });
+
+            newSocket.on("chat created", (newChat) => {
+                console.log("🆕 Brand new chat created:", newChat);
+                // Join the new room so we get messages for it
+                newSocket.emit("join chat", String(newChat._id));
+                // Refresh chats list
+                queryClient.invalidateQueries({ queryKey: ['chats'] });
+                
+                // Show toast for new chat if it's a DM and not from me
+                const other = newChat.participants?.find(p => String(p._id || p) !== String(user?._id));
+                if (other && !newChat.isGroup) {
+                    showToast({
+                        message: `${other.username || 'Someone'} started a conversation with you`,
+                        type: 'message',
+                        duration: 5000,
+                        sender: other
+                    });
+                }
+            });
+
+            newSocket.on("message mutated", (data) => {
+                console.log("🔄 Message mutation received:", data);
+                queryClient.invalidateQueries({ queryKey: ['chats'] });
+                if (data.chatId) {
+                    queryClient.invalidateQueries({ queryKey: ['messages', data.chatId] });
+                } else if (data.message?.chat_id) {
+                    queryClient.invalidateQueries({ queryKey: ['messages', data.message.chat_id] });
                 }
             });
 
@@ -218,23 +259,26 @@ export const SocketProvider = ({ children }) => {
             // Handle disconnection
             newSocket.on("disconnect", () => {
                 console.log("❌ Socket disconnected");
+                setIsConnected(false);
             });
 
             return () => {
                 newSocket.close();
                 setSocket(null);
+                setIsConnected(false);
             };
         } else {
             // Disconnect socket if user logs out
             if (socket) {
                 socket.close();
                 setSocket(null);
+                setIsConnected(false);
             }
         }
     }, [user]);
 
     return (
-        <SocketContext.Provider value={{ socket, onlineUsers }}>
+        <SocketContext.Provider value={{ socket, onlineUsers, isConnected }}>
             {children}
         </SocketContext.Provider>
     );

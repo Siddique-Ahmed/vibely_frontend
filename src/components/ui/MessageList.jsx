@@ -41,7 +41,7 @@ export function MessageList({
 
   return (
     <ScrollArea ref={scrollRef} className="flex-1 min-h-0 bg-muted/5">
-      <div className="p-4 flex flex-col gap-2 max-w-5xl mx-auto">
+      <div className="p-3 sm:p-4 flex flex-col gap-1 w-full">
         {messages && messages.length > 0 ? (
           messages.map((msg) => (
             <MessageItem

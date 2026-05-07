@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Search, Edit, Phone, Video, Info, MessageCircle, MoreVertical, ArrowLeft, Paperclip, Send, BellOff, Archive, Trash2, Pin, CornerUpRight, Eraser, Ban, LayoutList, Clock3, X } from "lucide-react";
+import { Search, Edit, Phone, Video, Info, MessageCircle, MoreVertical, ArrowLeft, Paperclip, Send, BellOff, Archive, Trash2, Pin, CornerUpRight, Eraser, Ban, LayoutList, Clock3, X, Users } from "lucide-react";
 import MainLayout from "../components/layouts/MainLayout";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
@@ -14,10 +14,12 @@ import {
   useChatDetail,
   useClearChat,
   useToggleBlock,
+  useCreateChat,
 } from "../hooks/useApi";
 import { MessageComposer } from "../components/ui/message";
 import { MessageList } from "../components/ui/MessageList";
 import CreateGroupModal from "../components/ui/CreateGroupModal";
+import NewChatModal from "../components/ui/NewChatModal";
 import { GroupMembersPanel } from "../components/ui/GroupMembersPanel";
 import ForwardMessageModal from "../components/ui/ForwardMessageModal";
 import { ScrollArea } from "../components/ui/scroll-area";
@@ -76,10 +78,15 @@ const Messages = () => {
   const [confirmClearChat, setConfirmClearChat] = useState(false);
   const [confirmBlockUser, setConfirmBlockUser] = useState(false);
   const [confirmDeleteChat, setConfirmDeleteChat] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
+  
+  const [statusUpdates, setStatusUpdates] = useState({}); // userId -> { isOnline, lastSeen }
+  const [isSending, setIsSending] = useState(false); // Prevent multiple simultaneous sends
   
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const { socket } = useSocket();
+  const { socket, isConnected } = useSocket();
   const queryClient = useQueryClient();
   
   const { data: chatsResponse, isLoading: loadingChats, isError: chatsError } = useChats(1, 20);
@@ -96,11 +103,17 @@ const Messages = () => {
   const deleteEveryoneMutation = useDeleteMessageForEveryone();
   const deleteMeMutation = useDeleteMessageForMe();
   const sendMessageMutation = useSendMessage({
-    onSuccess: () =>
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["messages"],
         exact: false,
-      }),
+      });
+      // Also invalidate chats list to update sidebar with new message
+      queryClient.invalidateQueries({
+        queryKey: ["chats"],
+        exact: false,
+      });
+    },
   });
   const editMessageMutation = useEditMessage({
     onSuccess: () =>
@@ -125,6 +138,19 @@ const Messages = () => {
         queryKey: ["chats"],
         exact: false,
       }),
+  });
+
+  const createChatMutation = useCreateChat({
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({
+        queryKey: ["chats"],
+        exact: false,
+      });
+      const chatId = response?.data?.chat?._id;
+      if (chatId) {
+        setActiveChatId(String(chatId));
+      }
+    },
   });
   
   // Backend allows max limit 50 for these endpoints — higher values fail with 400
@@ -154,6 +180,37 @@ const Messages = () => {
     followersResponse?.data?.followers,
     user?._id,
   ]);
+
+  // Helper functions for chat display
+  const getChatTitle = (chat) => {
+    if (!chat) return "Chat";
+    if (chat.isGroup) return chat.groupName || "Group chat";
+    const other = chat.participants?.find(
+      (p) => String(p._id) !== String(user?._id),
+    );
+    return other?.username || other?.profile?.full_name || "Friend";
+  };
+
+  const getChatAvatar = (chat) => {
+    if (!chat) return null;
+    if (chat.isGroup && chat.groupImage) return chat.groupImage;
+    const other =
+      chat.participants?.find((p) => String(p._id) !== String(user?._id)) ||
+      chat.participants?.[0];
+    return other?.profile?.profile_picture;
+  };
+
+  // Filter chats based on search query
+  const filteredChats = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return chats;
+    
+    return chats.filter((chat) => {
+      const title = getChatTitle(chat).toLowerCase();
+      const lastMessage = (chat.lastMessage?.content ?? "").toLowerCase();
+      return title.includes(q) || lastMessage.includes(q);
+    });
+  }, [chats, searchQuery]);
 
   // Sync activeChatId with URL
   useEffect(() => {
@@ -260,11 +317,22 @@ const Messages = () => {
     socket.on("typing", handleTyping);
     socket.on("stop typing", handleStopTyping);
 
+    socket.on("user status changed", (data) => {
+      setStatusUpdates((prev) => ({
+        ...prev,
+        [data.userId]: {
+          isOnline: data.status === "online",
+          lastSeen: data.status === "offline" ? data.timestamp : null,
+        },
+      }));
+    });
+
     return () => {
       console.log("🔌 Removing socket listeners");
       socket.off("message received", handleNewMessage);
       socket.off("typing", handleTyping);
       socket.off("stop typing", handleStopTyping);
+      socket.off("user status changed");
     };
   }, [socket, chatIdStr, queryClient, markAsSeenMutation, user?._id]);
 
@@ -277,10 +345,18 @@ const Messages = () => {
 
   // Handlers
   const handleSend = async () => {
+    // Prevent multiple simultaneous sends
+    if (isSending || sendMessageMutation.isPending || editMessageMutation.isPending) return;
+    
     const filesToSend = previewFiles.length > 0 ? previewFiles.map(p => p.file) : attachedFiles;
     const sendChatId = chatIdStr || (activeChat?._id != null ? String(activeChat._id) : null);
+    
+    // Validate inputs
     if (!sendChatId || (!draft.trim() && filesToSend.length === 0)) return;
+    
     try {
+      setIsSending(true);
+      
       if (editingMessage) {
         await editMessageMutation.mutateAsync({ messageId: editingMessage._id, content: draft.trim() });
       } else {
@@ -292,10 +368,18 @@ const Messages = () => {
           reply_to: replyTo?._id || null,
         });
       }
-      setDraft(""); setAttachedFiles([]); setPreviewFiles([]); setReplyTo(null); setEditingMessage(null);
+      
+      // Clear form only after successful send
+      setDraft("");
+      setAttachedFiles([]);
+      setPreviewFiles([]);
+      setReplyTo(null);
+      setEditingMessage(null);
     } catch (error) {
       console.error("Operation failed", error);
       showToast({ message: getChatActionError(error), type: "error" });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -442,27 +526,14 @@ const Messages = () => {
     }
   };
 
-  const getChatTitle = (chat) => {
-    if (!chat) return "Chat";
-    if (chat.isGroup) return chat.groupName || "Group chat";
-    const other = chat.participants?.find(
-      (p) => String(p._id) !== String(user?._id),
-    );
-    return other?.username || other?.profile?.full_name || "Friend";
-  };
-
-  const getChatAvatar = (chat) => {
-    if (!chat) return null;
-    if (chat.isGroup && chat.groupImage) return chat.groupImage;
-    const other =
-      chat.participants?.find((p) => String(p._id) !== String(user?._id)) ||
-      chat.participants?.[0];
-    return other?.profile?.profile_picture;
-  };
-
   return (
-    <MainLayout sidebar={<Sidebar />} topbar={<Topbar />}>
-      <div className="h-[calc(100vh-130px)] md:h-[calc(100vh-90px)] w-full max-w-7xl mx-auto flex overflow-hidden bg-background relative min-h-0">
+    <MainLayout sidebar={<Sidebar />} topbar={<Topbar />} hideBottomNav={!!activeChat}>
+      <div className={cn(
+        "w-full max-w-7xl mx-auto flex overflow-hidden bg-background relative min-h-0 transition-all duration-300",
+        activeChat 
+          ? "h-[calc(100vh-60px)] md:h-[calc(100vh-60px)]" 
+          : "h-[calc(100vh-124px)] md:h-[calc(100vh-90px)]"
+      )}>
         {/* Image Preview Overlay */}
         {previewFiles.length > 0 && (
           <div className="absolute inset-0 z-50 bg-slate-900/95 flex flex-col animate-in fade-in zoom-in duration-300">
@@ -479,8 +550,8 @@ const Messages = () => {
              <div className="p-4 bg-slate-900 border-t border-white/10">
                 <div className="max-w-4xl mx-auto flex items-end gap-3">
                   <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Add a caption..." className="bg-white/10 border-none text-white focus-visible:ring-0" />
-                  <Button onClick={handleSend} disabled={sendMessageMutation.isLoading} className="h-12 w-12 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg">
-                    {sendMessageMutation.isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={20} />}
+                  <Button onClick={handleSend} disabled={isSending || sendMessageMutation.isPending || !draft.trim()} className="h-12 w-12 rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isSending || sendMessageMutation.isPending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={20} />}
                   </Button>
                 </div>
              </div>
@@ -488,42 +559,65 @@ const Messages = () => {
         )}
 
         {/* Chat List */}
-        <div className={cn("w-full lg:w-95 shrink-0 flex flex-col border-r border-border/40 bg-background transition-all duration-300 min-h-0", activeChat ? "hidden lg:flex" : "flex")}>
+        <div className={cn("w-full lg:w-[400px] xl:w-[450px] shrink-0 flex flex-col border-r border-border/40 bg-background transition-all duration-300 min-h-0", activeChat ? "hidden lg:flex" : "flex")}>
             <div className="p-6 space-y-5">
              <div className="flex items-center justify-between">
                <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">Messages</h1>
-               <Button variant="ghost" size="icon" onClick={() => setShowNewGroupModal(true)} className="rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 hover:bg-purple-100 transition-all">
-                 <Edit size={20} />
-               </Button>
+               <DropdownMenu>
+                 <DropdownMenuTrigger asChild>
+                   <Button variant="ghost" size="icon" className="rounded-2xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 hover:bg-purple-100 transition-all">
+                     <Edit size={20} />
+                   </Button>
+                 </DropdownMenuTrigger>
+                 <DropdownMenuContent align="end" className="w-56 rounded-2xl shadow-lg border-border/40 bg-background/95 backdrop-blur-md">
+                   <DropdownMenuItem onClick={() => setShowNewChatModal(true)} className="gap-3 py-2.5 px-3 rounded-xl focus:bg-purple-50 focus:text-purple-600 cursor-pointer">
+                     <MessageCircle size={16} className="text-purple-600" />
+                     <div className="flex flex-col gap-0.5">
+                       <span className="font-bold text-sm">New Chat</span>
+                       <span className="text-xs text-muted-foreground">Start a 1-on-1 conversation</span>
+                     </div>
+                   </DropdownMenuItem>
+                   <DropdownMenuSeparator className="bg-border/30" />
+                   <DropdownMenuItem onClick={() => setShowNewGroupModal(true)} className="gap-3 py-2.5 px-3 rounded-xl focus:bg-purple-50 focus:text-purple-600 cursor-pointer">
+                     <Users size={16} className="text-purple-600" />
+                     <div className="flex flex-col gap-0.5">
+                       <span className="font-bold text-sm">New Group</span>
+                       <span className="text-xs text-muted-foreground">Create a group chat</span>
+                     </div>
+                   </DropdownMenuItem>
+                 </DropdownMenuContent>
+               </DropdownMenu>
              </div>
              
              <div className="relative group">
-               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-purple-500 transition-colors" size={18} />
-               <Input 
-                 placeholder="Search conversations..." 
-                 className="pl-11 h-12 rounded-2xl bg-slate-100/50 dark:bg-slate-900/50 border-none focus-visible:ring-2 focus-visible:ring-purple-500/20 transition-all" 
-               />
-             </div>
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-purple-500 transition-colors" size={18} />
+                <Input 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search conversations..." 
+                  className="pl-11 h-12 rounded-2xl bg-slate-100/50 dark:bg-slate-900/50 border-none focus-visible:ring-2 focus-visible:ring-purple-500/20 transition-all" 
+                />
+              </div>
 
-             <Button 
-               variant="outline" 
-               className="w-full justify-start gap-3 rounded-2xl border-purple-100 dark:border-purple-900/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-all text-muted-foreground py-7 shadow-sm group"
-               onClick={() => navigate("/archived-chats")}
-             >
-               <div className="h-10 w-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
-                 <Archive size={20} className="text-purple-600" />
-               </div>
-               <div className="flex flex-col items-start">
-                 <span className="font-bold text-slate-900 dark:text-slate-200">Archived Chats</span>
-                 <span className="text-[10px] font-medium opacity-60 uppercase tracking-widest">Hidden conversations</span>
-               </div>
-               <div className="ml-auto bg-purple-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg">View</div>
-             </Button>
-           </div>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-3 rounded-2xl border-purple-100 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 transition-all text-muted-foreground py-6 shadow-sm group"
+                onClick={() => navigate("/archived-chats")}
+              >
+                <div className="h-9 w-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Archive size={18} className="text-purple-600" />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="font-bold text-sm text-slate-900 dark:text-slate-200">Archived Chats</span>
+                  <span className="text-[9px] font-medium opacity-60 uppercase tracking-widest">Hidden conversations</span>
+                </div>
+                <div className="ml-auto bg-purple-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-lg">View</div>
+              </Button>
+             </div>
            
            <ScrollArea className="flex-1 px-3 pb-6">
              <div className="space-y-1">
-               {chats.map((chat) => (
+               {filteredChats.map((chat) => (
                  <div
                    key={chat._id}
                  onClick={() => {
@@ -550,12 +644,16 @@ const Messages = () => {
                          {getChatTitle(chat).substring(0, 2).toUpperCase()}
                        </AvatarFallback>
                      </Avatar>
-                     {!chat.isGroup && (
-                       <span className={cn(
-                         "absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background",
-                         "bg-green-500 shadow-sm"
-                       )} />
-                     )}
+                      {!chat.isGroup && (() => {
+                        const otherInList = chat.participants?.find(p => String(p._id || p) !== String(user?._id));
+                        const isUserOnline = statusUpdates[otherInList?._id]?.isOnline ?? otherInList?.is_online;
+                        return isUserOnline && (
+                          <span className={cn(
+                            "absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background",
+                            "bg-green-500 shadow-sm"
+                          )} />
+                        );
+                      })()}
                    </div>
                    
                    <div className="flex-1 min-w-0">
@@ -597,7 +695,7 @@ const Messages = () => {
           {activeChat ? (
             <>
                {/* Header */}
-               <div className="h-20 px-6 border-b border-border/40 bg-background/80 backdrop-blur-md flex items-center justify-between shrink-0 z-10">
+               <div className="h-16 md:h-20 px-4 md:px-6 border-b border-border/40 bg-background/80 backdrop-blur-md flex items-center justify-between shrink-0 z-10">
                  <div className="flex items-center gap-4">
                    <Button variant="ghost" size="icon" onClick={() => setActiveChatId(null)} className="lg:hidden rounded-full"><ArrowLeft size={20} /></Button>
                    <div className="relative">
@@ -605,20 +703,46 @@ const Messages = () => {
                        <AvatarImage src={getChatAvatar(activeChat)} />
                        <AvatarFallback className="bg-linear-to-br from-purple-100 to-indigo-100 text-purple-700 font-bold">{getChatTitle(activeChat).substring(0, 2).toUpperCase()}</AvatarFallback>
                      </Avatar>
-                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                     {(() => {
+                       const status = statusUpdates[otherDmUser?._id] || { 
+                         isOnline: otherDmUser?.is_online, 
+                         lastSeen: otherDmUser?.last_seen 
+                       };
+                       return status.isOnline && (
+                         <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background shadow-sm" />
+                       );
+                     })()}
                    </div>
                    <div className="min-w-0">
-                     <h2 className="text-[16px] font-black leading-none truncate text-slate-900 dark:text-slate-100">{getChatTitle(activeChat)}</h2>
-                     <p className="text-[10px] text-green-500 font-bold mt-1.5 flex items-center gap-1.5 uppercase tracking-widest">
-                       <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Online
-                     </p>
+                     <h2 className="text-sm md:text-[16px] font-black leading-none truncate text-slate-900 dark:text-slate-100">{getChatTitle(activeChat)}</h2>
+                     {activeChat.isGroup ? (
+                       <p className="text-[9px] md:text-[10px] text-muted-foreground font-bold mt-1 md:mt-1.5 flex items-center gap-1.5 uppercase tracking-widest">
+                         {activeChat.participants?.length || 0} Members
+                       </p>
+                     ) : (
+                       (() => {
+                         const status = statusUpdates[otherDmUser?._id] || { 
+                           isOnline: otherDmUser?.is_online, 
+                           lastSeen: otherDmUser?.last_seen 
+                         };
+                         return status.isOnline ? (
+                           <p className="text-[9px] md:text-[10px] text-green-500 font-bold mt-1 md:mt-1.5 flex items-center gap-1.5 uppercase tracking-widest">
+                             <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-green-500 animate-pulse" /> Online
+                           </p>
+                         ) : (
+                           <p className="text-[9px] md:text-[10px] text-muted-foreground font-bold mt-1 md:mt-1.5 flex items-center gap-1.5 uppercase tracking-widest">
+                             Offline {status.lastSeen && `• Last seen ${new Date(status.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                           </p>
+                         );
+                       })()
+                     )}
                    </div>
                  </div>
-                 <div className="flex items-center gap-2">
-                   <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50 transition-all"><Phone size={18} /></Button>
-                   <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50 transition-all"><Video size={18} /></Button>
-                   <Button variant="ghost" size="icon" onClick={() => { openChatDetail(); setShowInfo(false); }} className="rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50" title="Chat details"><LayoutList size={18} /></Button>
-                   <Button variant="ghost" size="icon" onClick={() => setShowInfo(!showInfo)} className={cn("rounded-xl transition-all", showInfo ? "bg-purple-600 text-white shadow-lg shadow-purple-500/30" : "text-muted-foreground hover:text-purple-600 hover:bg-purple-50")}><Info size={18} /></Button>
+                 <div className="flex items-center gap-1 md:gap-2">
+                   <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50 transition-all"><Phone size={16} className="md:w-[18px] md:h-[18px]" /></Button>
+                   <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50 transition-all"><Video size={16} className="md:w-[18px] md:h-[18px]" /></Button>
+                   <Button variant="ghost" size="icon" onClick={() => { openChatDetail(); setShowInfo(false); }} className="hidden sm:flex h-8 w-8 md:h-10 md:w-10 rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50" title="Chat details"><LayoutList size={16} className="md:w-[18px] md:h-[18px]" /></Button>
+                   <Button variant="ghost" size="icon" onClick={() => setShowInfo(!showInfo)} className={cn("h-8 w-8 md:h-10 md:w-10 rounded-xl transition-all", showInfo ? "bg-purple-600 text-white shadow-lg shadow-purple-500/30" : "text-muted-foreground hover:text-purple-600 hover:bg-purple-50")}><Info size={16} className="md:w-[18px] md:h-[18px]" /></Button>
                    <DropdownMenu>
                      <DropdownMenuTrigger asChild>
                        <Button variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-purple-600 hover:bg-purple-50 transition-all">
@@ -698,7 +822,7 @@ const Messages = () => {
                       onMessageChange={setDraft}
                       onSend={handleSend}
                       onAttach={() => fileInputRef.current?.click()}
-                      loading={sendMessageMutation.isLoading}
+                      loading={isSending || sendMessageMutation.isPending}
                     />
                   </div>
                   <input ref={fileInputRef} type="file" multiple className="hidden" onChange={(e) => {
@@ -835,6 +959,27 @@ const Messages = () => {
             const res = await createGroupMutation.mutateAsync(formData);
             showToast({
               message: res?.message || "Group created",
+              type: "success",
+            });
+          }}
+        />
+
+        <NewChatModal
+          open={showNewChatModal}
+          onClose={() => setShowNewChatModal(false)}
+          contacts={contactsForGroup}
+          contactsLoading={
+            loadingFollowingContacts || loadingFollowersContacts
+          }
+          contactsError={
+            followingContactsError && followersContactsError
+              ? "Could not load your contacts. Try again."
+              : null
+          }
+          onSelectUser={async (userId) => {
+            const res = await createChatMutation.mutateAsync(userId);
+            showToast({
+              message: res?.message || "Chat opened",
               type: "success",
             });
           }}

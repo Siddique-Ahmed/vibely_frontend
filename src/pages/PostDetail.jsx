@@ -4,7 +4,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSelector } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  usePost, useComments, useCreateComment, useToggleLike, useToggleBookmark, useSharePost, useDeletePost
+  usePost,
+  useComments,
+  useCreateComment,
+  useToggleLike,
+  useToggleBookmark,
+  useSharePost,
+  useDeletePost,
 } from "../hooks/useApi";
 import DeleteConfirmModal from "../components/posts/DeleteConfirmModal";
 import EditPostModal from "../components/EditPostModal";
@@ -15,32 +21,86 @@ import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
 import CommentLikesModal from "../components/CommentLikesModal";
 import {
-  Heart, MessageCircle, Bookmark, Send, Loader2, Share2, Check,
-  MessageSquareOff, MoreHorizontal, ArrowLeft,
+  Heart,
+  MessageCircle,
+  Bookmark,
+  Send,
+  Loader2,
+  Share2,
+  Check,
+  MessageSquareOff,
+  MoreHorizontal,
+  ArrowLeft,
 } from "lucide-react";
 import MentionSuggestions from "../components/MentionSuggestions";
 import Avatar from "../components/Avatar";
 import { useRef, useEffect } from "react";
 
 const reactions = [
-  { name: "like", label: "Like", emoji: "👍", color: "text-blue-500", bg: "bg-blue-50" },
-  { name: "love", label: "Love", emoji: "❤️", color: "text-red-500", bg: "bg-red-50" },
-  { name: "haha", label: "Haha", emoji: "😂", color: "text-yellow-500", bg: "bg-yellow-50" },
-  { name: "wow", label: "Wow", emoji: "😮", color: "text-yellow-500", bg: "bg-yellow-50" },
-  { name: "sad", label: "Sad", emoji: "😢", color: "text-blue-400", bg: "bg-blue-50" },
-  { name: "angry", label: "Angry", emoji: "😠", color: "text-orange-600", bg: "bg-orange-50" },
+  {
+    name: "like",
+    label: "Like",
+    emoji: "👍",
+    color: "text-blue-500",
+    bg: "bg-blue-50",
+  },
+  {
+    name: "love",
+    label: "Love",
+    emoji: "❤️",
+    color: "text-red-500",
+    bg: "bg-red-50",
+  },
+  {
+    name: "haha",
+    label: "Haha",
+    emoji: "😂",
+    color: "text-yellow-500",
+    bg: "bg-yellow-50",
+  },
+  {
+    name: "wow",
+    label: "Wow",
+    emoji: "😮",
+    color: "text-yellow-500",
+    bg: "bg-yellow-50",
+  },
+  {
+    name: "sad",
+    label: "Sad",
+    emoji: "😢",
+    color: "text-blue-400",
+    bg: "bg-blue-50",
+  },
+  {
+    name: "angry",
+    label: "Angry",
+    emoji: "😠",
+    color: "text-orange-600",
+    bg: "bg-orange-50",
+  },
 ];
 
 // ─── CommentItem ─────────────────────────────────────────────────────────────
-const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onReply = () => { } }) => {
+const CommentItem = ({
+  comment,
+  toggleLike,
+  currentUser,
+  isReply = false,
+  onReply = () => {},
+}) => {
   const [showReactions, setShowReactions] = useState(false);
   const [isLiked, setIsLiked] = useState(!!comment.isLiked);
   const [currentReaction, setCurrentReaction] = useState(
-    comment.reaction_type || (comment.isLiked ? "like" : null)
+    comment.reaction_type || (comment.isLiked ? "like" : null),
   );
-  const [likesCount, setLikesCount] = useState(Number(comment.likes_count) || 0);
+  const [likesCount, setLikesCount] = useState(
+    Number(comment.likes_count) || 0,
+  );
   const [likes, setLikes] = useState(comment.likes || []);
-  const [likesByReaction, setLikesByReaction] = useState(comment.likesByReaction || {});
+  const [likesByReaction, setLikesByReaction] = useState(
+    comment.likesByReaction || {},
+  );
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [isSendingReply, setIsSendingReply] = useState(false);
@@ -49,7 +109,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
   const [isCommentLikingPending, setIsCommentLikingPending] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [showMentions, setShowMentions] = useState(false);
-  const [cursorPos,    setCursorPos]    = useState(0);
+  const [cursorPos, setCursorPos] = useState(0);
 
   const reactionTimeoutRef = useRef(null);
   const longPressTimerRef = useRef(null);
@@ -74,11 +134,20 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
   // Sync when comment prop changes (e.g. after refetch)
   useEffect(() => {
     setIsLiked(!!comment.isLiked);
-    setCurrentReaction(comment.reaction_type || (comment.isLiked ? "like" : null));
+    setCurrentReaction(
+      comment.reaction_type || (comment.isLiked ? "like" : null),
+    );
     setLikesCount(Number(comment.likes_count) || 0);
     setLikes(comment.likes || []);
     setLikesByReaction(comment.likesByReaction || {});
-  }, [comment._id, comment.isLiked, comment.reaction_type, comment.likes_count, comment.likes, comment.likesByReaction]);
+  }, [
+    comment._id,
+    comment.isLiked,
+    comment.reaction_type,
+    comment.likes_count,
+    comment.likes,
+    comment.likesByReaction,
+  ]);
 
   const handleLike = (reactionType = "like") => {
     // Prevent double mutations while one is pending
@@ -120,7 +189,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
             setLikesByReaction(prevByReaction);
             setIsCommentLikingPending(false);
           },
-        }
+        },
       );
     } else {
       // ── Like / change reaction ──
@@ -136,7 +205,10 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
             if (res.comment) {
               setIsLiked(!!res.comment.isLiked);
               setCurrentReaction(res.comment.reaction_type || reactionType);
-              setLikesCount(Number(res.comment.likes_count) ?? (wasLiked ? prevCount : prevCount + 1));
+              setLikesCount(
+                Number(res.comment.likes_count) ??
+                  (wasLiked ? prevCount : prevCount + 1),
+              );
               setLikes(res.comment.likes || []);
               setLikesByReaction(res.comment.likesByReaction || {});
             }
@@ -150,7 +222,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
             setLikesByReaction(prevByReaction);
             setIsCommentLikingPending(false);
           },
-        }
+        },
       );
     }
     setShowReactions(false);
@@ -176,7 +248,10 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
   };
 
   const handleMentionSelect = (username) => {
-    const textBeforeAt = replyText.substring(0, replyText.lastIndexOf("@", cursorPos - 1));
+    const textBeforeAt = replyText.substring(
+      0,
+      replyText.lastIndexOf("@", cursorPos - 1),
+    );
     const textAfterCursor = replyText.substring(cursorPos);
     const newText = `${textBeforeAt}@${username} ${textAfterCursor}`;
     setReplyText(newText);
@@ -193,7 +268,8 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
     });
   };
 
-  const reactionData = reactions.find((r) => r.name === currentReaction) || reactions[0];
+  const reactionData =
+    reactions.find((r) => r.name === currentReaction) || reactions[0];
 
   return (
     <>
@@ -210,19 +286,26 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
             <p className="text-xs font-semibold text-slate-900 dark:text-white mb-0.5">
               {comment.created_by?.username}
             </p>
-            <p className={`${isReply ? "text-xs" : "text-sm"} text-slate-700 dark:text-slate-300`}>
+            <p
+              className={`${isReply ? "text-xs" : "text-sm"} text-slate-700 dark:text-slate-300`}
+            >
               {processMentions(comment.content, currentUser?.blocked_usernames)}
             </p>
           </div>
 
           <div className="flex items-center gap-3 mt-1 ml-2">
-            <p className="text-[10px] text-slate-400">{formatTimeAgo(comment.createdAt)}</p>
+            <p className="text-[10px] text-slate-400">
+              {formatTimeAgo(comment.createdAt)}
+            </p>
 
             {/* Like button with reaction picker */}
             <div
               className="relative"
               onMouseEnter={() => {
-                reactionTimeoutRef.current = setTimeout(() => setShowReactions(true), 500);
+                reactionTimeoutRef.current = setTimeout(
+                  () => setShowReactions(true),
+                  500,
+                );
               }}
               onMouseLeave={() => {
                 clearTimeout(reactionTimeoutRef.current);
@@ -241,16 +324,20 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
                     initial={{ opacity: 0, y: 10, scale: 0.8 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                    className="absolute left-0 bottom-full pb-2 -mb-1 bg-transparent z-50 no-select"
+                    className="absolute bottom-full pb-2 -mb-1 bg-transparent z-50 no-select"
+                    style={{ left: "50%", transform: "translateX(-50%)" }}
                   >
-                    <div className="bg-white dark:bg-slate-800 shadow-xl rounded-full px-1.5 py-1 flex items-center gap-0.5 border border-slate-200 dark:border-slate-700">
+                    <div className="bg-white dark:bg-slate-800 shadow-xl rounded-full px-1 py-1 flex items-center gap-0 border border-slate-200 dark:border-slate-700">
                       {reactions.map((r) => (
                         <motion.button
                           key={r.name}
                           whileHover={{ scale: 1.3, y: -3 }}
                           whileTap={{ scale: 0.9 }}
-                          onClick={(e) => { e.stopPropagation(); handleLike(r.name); }}
-                          className="w-8 h-8 flex items-center justify-center text-lg hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLike(r.name);
+                          }}
+                          className="w-7 h-7 flex items-center justify-center text-base hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
                         >
                           {r.emoji}
                         </motion.button>
@@ -262,10 +349,13 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
 
               <button
                 onClick={() => handleLike(currentReaction || "like")}
-                className={`text-[10px] font-bold transition hover:underline ${isLiked ? reactionData.color : "text-slate-500"
-                  }`}
+                className={`text-[10px] font-bold transition hover:underline ${
+                  isLiked ? reactionData.color : "text-slate-500"
+                }`}
               >
-                {isLiked && currentReaction !== "like" ? reactionData.label : "Like"}
+                {isLiked && currentReaction !== "like"
+                  ? reactionData.label
+                  : "Like"}
               </button>
             </div>
 
@@ -290,23 +380,25 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
                     ? reactions.find((r) => r.name === currentReaction)?.emoji
                     : "👍"}
                 </span>
-                <span className="text-[10px] font-medium text-slate-500">{likesCount}</span>
+                <span className="text-[10px] font-medium text-slate-500">
+                  {likesCount}
+                </span>
               </button>
             )}
           </div>
 
           {/* Reply input */}
           {showReplyInput && !isReply && (
-            <div className="mt-3 ml-2 flex gap-2 items-end">
+            <div className="mt-3 flex gap-2 items-center w-full">
               <Avatar
                 profilePicture={currentUser?.profile?.profile_picture}
                 fullName={currentUser?.profile?.full_name}
                 username={currentUser?.username}
                 size="sm"
-                className="w-6 h-6 flex-shrink-0"
+                className="w-6 h-6 flex-shrink-0 shadow-sm"
               />
-              <div className="flex-1 relative">
-                <div className="bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-2 flex items-center gap-2">
+              <div className="flex-1 min-w-0 relative">
+                <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-3 py-2 flex items-center gap-2 focus-within:ring-2 ring-purple-500/20 transition-all">
                   <input
                     type="text"
                     placeholder={`Reply to ${comment.created_by?.username}...`}
@@ -315,17 +407,18 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
                     onKeyUp={(e) => setCursorPos(e.target.selectionStart)}
                     onBlur={() => setTimeout(() => setShowMentions(false), 200)}
                     onKeyDown={(e) => e.key === "Enter" && handleReply()}
-                    className="bg-transparent flex-1 outline-none text-sm text-slate-900 dark:text-white placeholder-slate-500"
+                    className="bg-transparent flex-1 min-w-0 outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400"
                     autoFocus
                   />
                   <motion.button
                     whileTap={{ scale: 0.9 }}
                     onClick={handleReply}
                     disabled={!replyText.trim() || isSendingReply}
-                    className={`flex-shrink-0 p-1 rounded-full transition ${replyText.trim()
-                        ? "hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+                    className={` flex-shrink-0 p-1.5 rounded-xl transition ${
+                      replyText.trim()
+                        ? "text-purple-600 dark:text-purple-400"
                         : "text-slate-400 cursor-not-allowed"
-                      }`}
+                    }`}
                   >
                     {isSendingReply ? (
                       <Loader2 size={16} className="animate-spin" />
@@ -336,8 +429,12 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
                 </div>
                 <AnimatePresence>
                   {showMentions && (
-                    <div className="absolute bottom-full left-0 mb-2 w-full max-w-[280px]">
-                      <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} />
+                    <div className="absolute bottom-full left-0 mb-2 w-full max-w-[280px] z-[10000]">
+                      <MentionSuggestions
+                        query={mentionQuery}
+                        onSelect={handleMentionSelect}
+                        placement="bottom-full"
+                      />
                     </div>
                   )}
                 </AnimatePresence>
@@ -363,7 +460,7 @@ const CommentItem = ({ comment, toggleLike, currentUser, isReply = false, onRepl
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="ml-2 mt-2 space-y-3 overflow-hidden"
+                    className="ml-4 mt-2 space-y-4 border-l-2 border-slate-100 dark:border-slate-800 pl-4 overflow-hidden"
                   >
                     {comment.replies.map((reply) => (
                       <CommentItem
@@ -403,7 +500,11 @@ const PostDetail = () => {
   const { user: currentUser } = useSelector((s) => s.auth);
 
   const { data: postData, isLoading } = usePost(postId);
-  const { data: commentsData, isLoading: commentsLoading } = useComments(postId, 1, 50);
+  const { data: commentsData, isLoading: commentsLoading } = useComments(
+    postId,
+    1,
+    50,
+  );
   const { mutate: createComment, isPending: sending } = useCreateComment();
   const { mutate: toggleLike } = useToggleLike();
   const { mutate: toggleBookmark } = useToggleBookmark();
@@ -427,7 +528,7 @@ const PostDetail = () => {
   const [isLikingPending, setIsLikingPending] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [showMentions, setShowMentions] = useState(false);
-  const [cursorPos,    setCursorPos]    = useState(0);
+  const [cursorPos, setCursorPos] = useState(0);
   const reactionTimeoutRef = useRef(null);
   const longPressTimerRef = useRef(null);
 
@@ -457,7 +558,13 @@ const PostDetail = () => {
       setLikesCount(Number(post?.likes_count) ?? 0);
       setIsBookmarked(!!(post?.isBookmarked ?? post?.is_bookmarked));
     }
-  }, [post?._id, post?.isLiked, post?.reaction_type, post?.likes_count, post?.isBookmarked]);
+  }, [
+    post?._id,
+    post?.isLiked,
+    post?.reaction_type,
+    post?.likes_count,
+    post?.isBookmarked,
+  ]);
 
   const comments = commentsData?.data?.comments ?? commentsData?.comments ?? [];
 
@@ -481,7 +588,10 @@ const PostDetail = () => {
   };
 
   const handleMentionSelect = (username) => {
-    const textBeforeAt = commentText.substring(0, commentText.lastIndexOf("@", cursorPos - 1));
+    const textBeforeAt = commentText.substring(
+      0,
+      commentText.lastIndexOf("@", cursorPos - 1),
+    );
     const textAfterCursor = commentText.substring(cursorPos);
     const newText = `${textBeforeAt}@${username} ${textAfterCursor}`;
     setCommentText(newText);
@@ -498,7 +608,7 @@ const PostDetail = () => {
     if (!replyContent.trim()) return;
     createComment(
       { postId, content: replyContent, parentCommentId },
-      { onSuccess: () => onSuccess?.() }
+      { onSuccess: () => onSuccess?.() },
     );
   };
 
@@ -582,7 +692,7 @@ const PostDetail = () => {
             setLikesCount(prevCount);
             setIsLikingPending(false);
           },
-        }
+        },
       );
     } else {
       // ── Like / change reaction ──
@@ -608,7 +718,7 @@ const PostDetail = () => {
             setLikesCount(prevCount);
             setIsLikingPending(false);
           },
-        }
+        },
       );
     }
     setShowReactions(false);
@@ -618,7 +728,10 @@ const PostDetail = () => {
     return (
       <MainLayout sidebar={<Sidebar />} topbar={<Topbar />}>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#EC4899" }} />
+          <Loader2
+            className="w-8 h-8 animate-spin"
+            style={{ color: "#EC4899" }}
+          />
         </div>
       </MainLayout>
     );
@@ -630,7 +743,9 @@ const PostDetail = () => {
           <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
             <MessageSquareOff className="w-8 h-8 text-slate-400" />
           </div>
-          <p className="font-semibold text-slate-900 dark:text-white">Post not found</p>
+          <p className="font-semibold text-slate-900 dark:text-white">
+            Post not found
+          </p>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             This post may have been deleted or is unavailable.
           </p>
@@ -677,9 +792,17 @@ const PostDetail = () => {
               ) : (
                 <div
                   className="w-full h-full min-h-64 flex items-center justify-center p-8"
-                  style={{ background: "linear-gradient(135deg,#7C3AED,#EC4899,#F97316)" }}
+                  style={{
+                    background:
+                      "linear-gradient(135deg,#7C3AED,#EC4899,#F97316)",
+                  }}
                 >
-                  <p className="text-white text-xl font-medium text-center">{processMentions(post.caption, currentUser?.blocked_usernames)}</p>
+                  <p className="text-white text-xl font-medium text-center">
+                    {processMentions(
+                      post.caption,
+                      currentUser?.blocked_usernames,
+                    )}
+                  </p>
                 </div>
               )}
             </div>
@@ -704,7 +827,9 @@ const PostDetail = () => {
                     <p className="font-semibold text-sm text-slate-900 dark:text-white">
                       {post.created_by?.username}
                     </p>
-                    <p className="text-xs text-slate-500">{formatTimeAgo(post.createdAt)}</p>
+                    <p className="text-xs text-slate-500">
+                      {formatTimeAgo(post.createdAt)}
+                    </p>
                   </div>
                 </Link>
                 <div className="relative">
@@ -755,7 +880,10 @@ const PostDetail = () => {
               {post.caption && (
                 <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
                   <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                    {processMentions(post.caption, currentUser?.blocked_usernames)}
+                    {processMentions(
+                      post.caption,
+                      currentUser?.blocked_usernames,
+                    )}
                   </p>
                 </div>
               )}
@@ -784,7 +912,9 @@ const PostDetail = () => {
                     <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                       No comments yet
                     </p>
-                    <p className="text-xs text-slate-400 mt-1">Be the first to comment!</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Be the first to comment!
+                    </p>
                   </div>
                 )}
               </div>
@@ -798,7 +928,7 @@ const PostDetail = () => {
                     onMouseEnter={() => {
                       reactionTimeoutRef.current = setTimeout(
                         () => setShowReactions(true),
-                        500
+                        500,
                       );
                     }}
                     onMouseLeave={() => {
@@ -853,15 +983,21 @@ const PostDetail = () => {
                         e.stopPropagation();
                         handleLike(currentReaction || "like");
                       }}
-                      className={`flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl ${isLiked
+                      className={`flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl ${
+                        isLiked
                           ? `${activeReactionData?.color || "text-pink-500"} ${activeReactionData?.bg || "bg-pink-50"} dark:bg-opacity-20`
                           : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
+                      }`}
                     >
                       {isLiked && currentReaction !== "like" ? (
-                        <span className="text-xl">{activeReactionData?.emoji}</span>
+                        <span className="text-xl">
+                          {activeReactionData?.emoji}
+                        </span>
                       ) : (
-                        <Heart size={22} className={isLiked ? "fill-current" : ""} />
+                        <Heart
+                          size={22}
+                          className={isLiked ? "fill-current" : ""}
+                        />
                       )}
                       <span className="text-sm font-bold">{likesCount}</span>
                     </motion.button>
@@ -869,32 +1005,41 @@ const PostDetail = () => {
 
                   <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
                     <MessageCircle size={22} />
-                    <span className="text-sm font-medium">{post.comments_count || 0}</span>
+                    <span className="text-sm font-medium">
+                      {post.comments_count || 0}
+                    </span>
                   </div>
 
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={handleShare}
-                    className={`flex items-center gap-1.5 transition ${copied
+                    className={`flex items-center gap-1.5 transition ${
+                      copied
                         ? "text-green-500"
                         : "text-slate-600 dark:text-slate-400 hover:text-orange-500"
-                      }`}
+                    }`}
                   >
                     {copied ? <Check size={20} /> : <Share2 size={20} />}
-                    <span className="text-sm font-medium">{post.shares_count || 0}</span>
+                    <span className="text-sm font-medium">
+                      {post.shares_count || 0}
+                    </span>
                   </motion.button>
 
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={handleToggleBookmark}
-                    className={`ml-auto transition ${isBookmarked
+                    className={`ml-auto transition ${
+                      isBookmarked
                         ? "text-yellow-500"
                         : "text-slate-600 dark:text-slate-400 hover:text-yellow-500"
-                      }`}
+                    }`}
                   >
-                    <Bookmark size={22} className={isBookmarked ? "fill-yellow-500" : ""} />
+                    <Bookmark
+                      size={22}
+                      className={isBookmarked ? "fill-yellow-500" : ""}
+                    />
                   </motion.button>
                 </div>
 
@@ -908,36 +1053,46 @@ const PostDetail = () => {
                     className="w-8 h-8 flex-shrink-0"
                   />
                   <div className="flex-1 relative">
-                    <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full pr-1">
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 rounded-2xl pr-1.5 focus-within:ring-2 ring-purple-500/20 transition-all">
                       <input
                         type="text"
                         placeholder="Add a comment…"
                         value={commentText}
                         onChange={handleCommentChange}
                         onKeyUp={(e) => setCursorPos(e.target.selectionStart)}
-                        onBlur={() => setTimeout(() => setShowMentions(false), 200)}
-                        onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
-                        className="flex-1 bg-transparent px-4 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+                        onBlur={() =>
+                          setTimeout(() => setShowMentions(false), 200)
+                        }
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handleAddComment()
+                        }
+                        className="flex-1 bg-transparent px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none min-h-[44px]"
                       />
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleAddComment}
                         disabled={!commentText.trim() || sending}
-                        className="w-8 h-8 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition"
-                        style={{ background: "linear-gradient(135deg,#7C3AED,#EC4899)" }}
+                        className="w-9 h-9 flex items-center justify-center rounded-xl text-white disabled:opacity-40 transition-all shadow-sm"
+                        style={{
+                          background: "linear-gradient(135deg,#7C3AED,#EC4899)",
+                        }}
                       >
                         {sending ? (
-                          <Loader2 size={14} className="animate-spin" />
+                          <Loader2 size={16} className="animate-spin" />
                         ) : (
-                          <Send size={14} />
+                          <Send size={16} />
                         )}
                       </motion.button>
                     </div>
                     <AnimatePresence>
                       {showMentions && (
-                        <div className="absolute bottom-full left-0 mb-2 w-full max-w-[280px]">
-                          <MentionSuggestions query={mentionQuery} onSelect={handleMentionSelect} />
+                        <div className="absolute bottom-full left-0 mb-3 w-[calc(100vw-4rem)] sm:w-full max-w-[320px] z-[10000]">
+                          <MentionSuggestions
+                            query={mentionQuery}
+                            onSelect={handleMentionSelect}
+                            placement="bottom-full"
+                          />
                         </div>
                       )}
                     </AnimatePresence>

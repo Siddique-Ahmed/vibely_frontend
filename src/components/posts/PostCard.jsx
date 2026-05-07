@@ -289,12 +289,25 @@ const PostCard = ({ post, onLike, onShare }) => {
   const handleShare = (e) => {
     e.stopPropagation();
     const url = `${window.location.origin}/post/${post._id}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    
+    // Try native share first if available
+    if (navigator.share) {
+      navigator.share({ url }).catch(() => {
+        // Fallback to clipboard if user cancels or error occurs
+        navigator.clipboard.writeText(url).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      });
+    } else {
+      // Fallback to clipboard copy
+      navigator.clipboard.writeText(url).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+    
     sharePostMutation(post._id);
-    onShare?.(post._id); // increments share counter in parent if provided
   };
 
   const handleDelete = (e) => {
@@ -337,20 +350,21 @@ const PostCard = ({ post, onLike, onShare }) => {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 mb-4 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-sm hover:shadow-md"
+        whileHover={{ y: -2 }}
+        className="bg-white dark:bg-slate-900/80 rounded-3xl border border-slate-200/60 dark:border-slate-700/60 mb-4 backdrop-blur-sm shadow-sm hover:shadow-lg dark:hover:shadow-xl dark:shadow-slate-950/50 transition-all duration-300"
       >
         {/* Post Header */}
-        <div className="p-4 flex items-center justify-between rounded-t-2xl">
+        <div className="p-5 flex items-center justify-between rounded-t-3xl bg-gradient-to-r from-transparent via-transparent to-purple-50/30 dark:to-purple-900/10">
           <Link
             to={`/profile/${post.created_by?._id}`}
-            className="flex items-center gap-3 group"
+            className="flex items-center gap-3 group flex-1"
             onClick={(e) => e.stopPropagation()}
           >
             <div
               className="relative"
               onMouseEnter={(e) => {
                 const child = e.currentTarget.querySelector("img, div");
-                if (child) child.style.borderColor = "rgba(124,58,237,0.5)";
+                if (child) child.style.borderColor = "rgba(124,58,237,0.6)";
               }}
               onMouseLeave={(e) => {
                 const child = e.currentTarget.querySelector("img, div");
@@ -362,17 +376,21 @@ const PostCard = ({ post, onLike, onShare }) => {
                 fullName={post.created_by?.profile?.full_name}
                 username={post.created_by?.username}
                 size="md"
-                className="border-2 border-transparent transition"
+                className="border-2 border-transparent transition shadow-sm"
               />
-              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
+              <motion.div 
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-gradient-to-br from-green-400 to-green-500 rounded-full border-2 border-white dark:border-slate-900 shadow-md" 
+              />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition leading-none">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition leading-none truncate">
                 {post.created_by?.profile?.full_name ||
                   post.created_by?.username}
               </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-xs text-slate-400">
+              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   @{post.created_by?.username}
                 </p>
                 {locationStr && (
@@ -380,14 +398,14 @@ const PostCard = ({ post, onLike, onShare }) => {
                     <span className="text-slate-300 dark:text-slate-600">
                       •
                     </span>
-                    <MapPin size={10} className="text-slate-400" />
-                    <p className="text-xs text-slate-400">{locationStr}</p>
+                    <MapPin size={11} className="text-purple-500 flex-shrink-0" />
+                    <p className="text-xs text-slate-600 dark:text-slate-400 truncate">{locationStr}</p>
                   </>
                 )}
               </div>
-              <div className="flex items-center gap-1 mt-0.5">
-                <Clock size={10} className="text-slate-400" />
-                <p className="text-[11px] text-slate-400">{timeAgo}</p>
+              <div className="flex items-center gap-1 mt-1">
+                <Clock size={11} className="text-slate-400 flex-shrink-0" />
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{timeAgo}</p>
               </div>
             </div>
           </Link>
@@ -654,7 +672,7 @@ const PostCard = ({ post, onLike, onShare }) => {
                   className="absolute left-0 bottom-full pb-3 -mb-1 bg-transparent z-50 no-select"
                   style={{ originX: 0, originY: 1 }}
                 >
-                  <div className="bg-white dark:bg-slate-800 shadow-xl rounded-full px-2 py-1.5 flex items-center gap-1 border border-slate-200 dark:border-slate-700">
+                  <div className="bg-white dark:bg-slate-800 shadow-xl rounded-full px-1.5 sm:px-2 py-1 sm:py-1.5 flex items-center gap-0.5 sm:gap-1 border border-slate-200 dark:border-slate-700 scale-90 sm:scale-100 origin-left">
                     {reactions.map((r, i) => (
                       <motion.button
                         key={r.name}
@@ -670,7 +688,7 @@ const PostCard = ({ post, onLike, onShare }) => {
                           e.stopPropagation();
                           handleLike(r.name);
                         }}
-                        className="w-10 h-10 flex items-center justify-center text-2xl hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                        className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-xl sm:text-2xl hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
                         title={r.label}
                       >
                         {r.emoji}
@@ -705,7 +723,7 @@ const PostCard = ({ post, onLike, onShare }) => {
                   className={isLiked ? "fill-red-500 text-red-500" : ""}
                 />
               )}
-              <span>
+              <span className="hidden xs:inline">
                 {isLiked
                   ? reactions.find((r) => r.name === currentReaction)?.label ||
                     "Liked"
@@ -724,7 +742,7 @@ const PostCard = ({ post, onLike, onShare }) => {
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 transition-all text-sm font-medium"
           >
             <MessageCircle size={18} strokeWidth={1.8} />
-            <span>Comment</span>
+            <span className="hidden xs:inline">Comment</span>
           </motion.button>
 
           {/* Share — copies link + increments counter */}
@@ -742,7 +760,7 @@ const PostCard = ({ post, onLike, onShare }) => {
             ) : (
               <Share2 size={18} strokeWidth={1.8} />
             )}
-            <span>{copied ? "Copied!" : "Share"}</span>
+            <span className="hidden xs:inline">{copied ? "Copied!" : "Share"}</span>
           </motion.button>
 
           {/* Bookmark */}
