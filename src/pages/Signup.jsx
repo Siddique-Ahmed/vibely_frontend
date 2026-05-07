@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import apiClient from "../services/apiClient";
+import apiClientVercel from "../services/apiClientVercel";
 import {
   Mail, Phone, Lock, Eye, EyeOff, User, AtSign,
   ArrowRight, ArrowLeft, CheckCircle2, Loader2,
@@ -88,7 +88,7 @@ const Signup = () => {
     setError("");
 
     try {
-      const response = await apiClient.post("/users/signup", {
+      const response = await apiClientVercel.post("/users/signup", {
         username: formData.username.trim().toLowerCase(),
         email: formData.email.trim(),
         phone_number: formData.phone_number.trim(),

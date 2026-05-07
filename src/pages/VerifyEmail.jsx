@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setToken, setUser } from "../redux/slices/authSlice";
+import apiClientVercel from "../services/apiClientVercel";
 import apiClient from "../services/apiClient";
 import {
   Mail, RefreshCw, CheckCircle2, AlertCircle,
@@ -90,7 +91,7 @@ const VerifyEmail = () => {
     setError("");
 
     try {
-      const response = await apiClient.post("/users/verify-signup", {
+      const response = await apiClientVercel.post("/users/verify-signup", {
         email,
         otp: code,
       });
@@ -137,7 +138,7 @@ const VerifyEmail = () => {
     setSuccess("");
 
     try {
-      await apiClient.post("/users/resend-otp", { email });
+      await apiClientVercel.post("/users/resend-otp", { email });
       setSuccess("New OTP sent to your email!");
       setResendTimer(60);
       setCanResend(false);

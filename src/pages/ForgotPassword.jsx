@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
+import apiClientVercel from "../services/apiClientVercel";
 import apiClient from "../services/apiClient";
 import {
   Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight,
@@ -43,7 +44,7 @@ const ForgotPassword = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await apiClient.post("/users/forgot-password", {
+      const res = await apiClientVercel.post("/users/forgot-password", {
         email: identifier,
         username: identifier,
         phone_number: identifier,
@@ -112,7 +113,7 @@ const ForgotPassword = () => {
     setResending(true);
     setError("");
     try {
-      await apiClient.post("/users/forgot-password", {
+      await apiClientVercel.post("/users/forgot-password", {
         email, username: email, phone_number: email,
       });
       setSuccess("New OTP sent!");
@@ -140,7 +141,7 @@ const ForgotPassword = () => {
     setLoading(true);
     setError("");
     try {
-      await apiClient.post("/users/reset-password", { email, new_password: newPassword });
+      await apiClientVercel.post("/users/reset-password", { email, new_password: newPassword });
       setSuccess("Password reset successfully!");
       setTimeout(() => navigate("/login", { replace: true }), 1500);
     } catch (err) {

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../redux/slices/authSlice";
+import apiClientVercel from "../services/apiClientVercel";
 import apiClient from "../services/apiClient";
 import {
   Mail, Phone, User as UserIcon, RefreshCw, CheckCircle2, AlertCircle,
@@ -75,7 +76,7 @@ const AccountActivation = () => {
     setError("");
 
     try {
-      const response = await apiClient.post("/users/activate-user");
+      const response = await apiClientVercel.post("/users/activate-user");
 
       if (response.data?.success) {
         setSuccess(`OTP sent to your ${identifierType}`);
@@ -144,7 +145,7 @@ const AccountActivation = () => {
     setError("");
 
     try {
-      const response = await apiClient.post(
+      const response = await apiClientVercel.post(
         "/users/verify-user-activation",
         {
           otp: code,
@@ -180,7 +181,7 @@ const AccountActivation = () => {
     setError("");
 
     try {
-      const response = await apiClient.post("/users/activate-user");
+      const response = await apiClientVercel.post("/users/activate-user");
 
       if (response.data?.success) {
         setSuccess(`OTP resent to your ${identifierType}`);

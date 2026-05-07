@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Mail, Phone, User, CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import apiClient from "../services/apiClient";
+import apiClientVercel from "../services/apiClientVercel";
 
 const AccountVerification = () => {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ const AccountVerification = () => {
     setSuccess("");
 
     try {
-      await apiClient.post("/users/resend-otp", { email: identifier });
+      await apiClientVercel.post("/users/resend-otp", { email: identifier });
       setSuccess("OTP sent to your registered email");
       setStep(2);
       setTimer(120); // 2 minutes timer
@@ -60,7 +60,7 @@ const AccountVerification = () => {
     setError("");
 
     try {
-      await apiClient.post("/users/verify-signup", {
+      await apiClientVercel.post("/users/verify-signup", {
         email: identifier,
         otp,
       });
@@ -83,7 +83,7 @@ const AccountVerification = () => {
     setError("");
 
     try {
-      await apiClient.post("/users/resend-otp", { email: identifier });
+      await apiClientVercel.post("/users/resend-otp", { email: identifier });
       setSuccess("OTP resent to your email");
       setTimer(120);
       setCanResend(false);
