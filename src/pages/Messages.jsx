@@ -285,6 +285,7 @@ const Messages = () => {
         // Invalidate ALL message queries to force refetch
         queryClient.invalidateQueries({
           queryKey: ["messages"],
+          exact: false,
         });
 
         // Mark as seen

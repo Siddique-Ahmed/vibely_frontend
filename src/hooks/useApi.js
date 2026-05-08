@@ -76,8 +76,16 @@ export const useSendMessage = (options = {}) => {
         .then((res) => res.data);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["messages", variables.chatId], exact: false });
-      queryClient.invalidateQueries({ queryKey: ["chats"], exact: false });
+      queryClient.invalidateQueries({ 
+        queryKey: ["messages", variables.chatId], 
+        exact: false,
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ["chats"], 
+        exact: false,
+        refetchType: 'active'
+      });
     },
   });
 };
