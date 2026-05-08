@@ -150,7 +150,7 @@ export const SocketProvider = ({ children }) => {
                 
                 const userId = String(user?._id);
                 const senderId = newMessage.sender?._id || newMessage.sender;
-                const messageChatId = newMessage.chat?._id || newMessage.chat;
+                const messageChatId = getSocketChatId(newMessage);
                 const isFromMe = String(senderId) === userId;
 
                 const urlParams = new URLSearchParams(window.location.search);
