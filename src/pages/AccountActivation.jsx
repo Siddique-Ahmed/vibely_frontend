@@ -53,7 +53,6 @@ const AccountActivation = () => {
       return false;
     }
 
-    // Simple validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\d{10,}$/;
 
