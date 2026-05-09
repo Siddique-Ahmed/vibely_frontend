@@ -517,6 +517,9 @@ export const useCreatePost = () => {
       queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["myPosts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["myProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["userProfilePosts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["userProfile"], exact: false });
     },
   });
 };
@@ -544,6 +547,7 @@ export const useDeletePost = () => {
       queryClient.invalidateQueries({ queryKey: ["posts"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["feedPosts"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["myPosts"], exact: false });
+      queryClient.invalidateQueries({ queryKey: ["myProfile"] });
     },
   });
 };

@@ -60,27 +60,34 @@ const EditProfileModal = ({ profile, onClose, onSaved }) => {
   };
 
   const handleSave = () => {
-    // Update profile data (non-privacy fields)
     const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => { if (v !== undefined) fd.append(k, v); });
+    Object.entries(form).forEach(([k, v]) => {
+      if (v !== undefined) fd.append(k, v);
+    });
     if (avatarFile) fd.append("profile_picture", avatarFile);
-    if (coverFile)  fd.append("cover_picture",   coverFile);
-    
+    if (coverFile) fd.append("cover_picture", coverFile);
+
+    // Chain the updates to avoid race conditions and state overwrites
     updateProfile(fd, {
       onSuccess: (res) => {
-        const updated = res?.data || res;
-        dispatch(setUser(updated));
-        onSaved(updated);
-      },
-    });
-
-    // Update privacy settings
-    updatePrivacy(privacyForm, {
-      onSuccess: (res) => {
-        const updatedPrivacy = res?.data || res;
-        dispatch(setUser({ ...profile, ...updatedPrivacy }));
-        onSaved({ ...profile, ...updatedPrivacy });
-        onClose();
+        const updatedUser = res?.data || res;
+        // After profile update, update privacy settings
+        updatePrivacy(privacyForm, {
+          onSuccess: (pRes) => {
+            const updatedPrivacy = pRes?.data || pRes;
+            // Merge both updates
+            const finalUser = { ...updatedUser, ...updatedPrivacy };
+            dispatch(setUser(finalUser));
+            onSaved(finalUser);
+            onClose();
+          },
+          onError: () => {
+            // Even if privacy fails, still save the profile update
+            dispatch(setUser(updatedUser));
+            onSaved(updatedUser);
+            onClose();
+          }
+        });
       },
     });
   };
@@ -851,7 +858,7 @@ const Profile = () => {
         </div>
       </div>
 
-      <CreatePostModal isOpen={showCreate} onClose={() => setShowCreate(false)} />
+      <CreatePostModal isOpen={showCreate} onClose={() => setShowCreate(false)} onSuccess={fetchProfile} />
 
       {showEdit && profile && (
         <EditProfileModal
